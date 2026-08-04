@@ -1,0 +1,234 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Gotcha — iOS, about 2012
+
+   Skeuomorphic iOS, the last version before everything went flat. It is a
+   small number of tricks used everywhere:
+
+     1. Every surface is a VERTICAL GRADIENT, light at the top. Nothing is a
+        flat colour, because nothing in that interface was.
+     2. Every raised edge has a 1px WHITE INNER HIGHLIGHT along its top and a
+        dark hairline below it. That pair is what makes a bar look like a
+        physical strip laid on the screen.
+     3. Text on a coloured bar has a 1px DARK SHADOW BELOW it; text on a light
+        surface has a 1px WHITE shadow below it. Letterpress, both ways round.
+     4. Textures, not colours, behind content — linen on the sheets, noise on
+        the bars.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --blue: #007aff;
+  --blue-dk: #0051d5;
+  --ink: #000;
+  --grey: #8e8e93;
+  --rule: #b2b2b2;
+  --bar-h: 44px;
+  --tab-h: 49px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0; height: 100%;
+  font: 15px/1.35 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ── linen ───────────────────────────────────────────────────────────────
+   The background texture behind everything. Two crossed sets of very faint
+   diagonal threads over a warm grey — the giveaway of the era. */
+.linen {
+  background-color: #4a4a4f;
+  background-image:
+    repeating-linear-gradient(45deg,
+      rgba(255,255,255,.028) 0px, rgba(255,255,255,.028) 1px,
+      rgba(0,0,0,.028) 1px, rgba(0,0,0,.028) 2px),
+    repeating-linear-gradient(-45deg,
+      rgba(255,255,255,.022) 0px, rgba(255,255,255,.022) 1px,
+      rgba(0,0,0,.022) 1px, rgba(0,0,0,.022) 2px);
+}
+
+/* ── the navigation bar ────────────────────────────────────────────────── */
+.navbar {
+  flex: none; height: var(--bar-h);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  background:
+    linear-gradient(to bottom,
+      #f8f8f8 0%, #e9e9e9 48%, #dedede 52%, #d1d1d1 100%);
+  /* The white line above and the dark hairline below — the pair that makes
+     it read as a physical strip rather than a coloured band. */
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.85) inset,
+    0 1px 0 rgba(0, 0, 0, 0.28);
+  border-bottom: 1px solid #a3a3a3;
+  z-index: 5;
+}
+.navbar .title {
+  font-size: 17px; font-weight: 700; letter-spacing: -0.2px;
+  color: #3b3b3b;
+  /* Letterpress: a white shadow BELOW dark text on a light surface. */
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.navbar .right, .navbar .left {
+  position: absolute; top: 0; bottom: 0;
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 9px;
+}
+.navbar .right { right: 0; }
+.navbar .left { left: 0; }
+
+/* The coin readout, as a glossy pill. */
+.coins {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 14px; font-weight: 700; color: #6b4c00;
+  padding: 4px 11px;
+  border-radius: 13px;
+  border: 1px solid #c9a227;
+  background: linear-gradient(to bottom, #ffe89a 0%, #ffd54f 50%, #f5c231 51%, #ffdf7a 100%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.8) inset, 0 1px 2px rgba(0,0,0,.25);
+  text-shadow: 0 1px 0 rgba(255,255,255,.6);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── buttons ─────────────────────────────────────────────────────────────
+   The glossy pill. `overflow:hidden` and `position:relative` are needed so
+   the gloss can be clipped to the top half. */
+.btn {
+  font: inherit; font-size: 15px; font-weight: 600;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 9px;
+  border: 1px solid var(--blue-dk);
+  cursor: pointer;
+  position: relative; overflow: hidden;
+  background: linear-gradient(to bottom, #4ea1ff 0%, #1a80ff 50%, #007aff 51%, #3d9bff 100%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.45) inset, 0 1px 2px rgba(0,0,0,.3);
+  text-shadow: 0 -1px 0 rgba(0,0,0,.35);
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+}
+/* The gloss: a hard-edged lighter block over the top half, which is how iOS
+   drew it — not a soft gradient over the whole button. */
+.btn::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 50%;
+  background: linear-gradient(to bottom, rgba(255,255,255,.38), rgba(255,255,255,.12));
+  pointer-events: none;
+}
+.btn:active { filter: brightness(0.88); }
+.btn:disabled { opacity: .45; cursor: default; filter: none; }
+
+.btn.grey {
+  color: #3b3b3b; border-color: #9b9b9b;
+  background: linear-gradient(to bottom, #fdfdfd 0%, #ececec 50%, #e0e0e0 51%, #f3f3f3 100%);
+  text-shadow: 0 1px 0 rgba(255,255,255,.9);
+}
+.btn.green {
+  border-color: #1f7a1f;
+  background: linear-gradient(to bottom, #7ce07c 0%, #35c035 50%, #24a324 51%, #5fd45f 100%);
+}
+.btn.gold {
+  color: #5a3d00; border-color: #b8901d;
+  background: linear-gradient(to bottom, #ffeaa0 0%, #ffd24a 50%, #f0be23 51%, #ffe07a 100%);
+  text-shadow: 0 1px 0 rgba(255,255,255,.6);
+}
+.btn.wide { width: 100%; }
+.btn.small { font-size: 13px; padding: 6px 12px; border-radius: 7px; }
+
+/* ── grouped table view ──────────────────────────────────────────────────
+   Rounded white blocks floating on the linen, with a header above in small
+   caps and a letterpress shadow. */
+.group { margin: 16px 12px; }
+.group > h3 {
+  margin: 0 0 7px 13px;
+  font-size: 12.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.4px;
+  color: rgba(255,255,255,.82);
+  /* On a dark surface the letterpress shadow goes the other way. */
+  text-shadow: 0 -1px 0 rgba(0,0,0,.55);
+}
+.cells {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,.28);
+  box-shadow: 0 1px 2px rgba(0,0,0,.28);
+  overflow: hidden;
+}
+.cell {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 13px;
+  background: linear-gradient(to bottom, #ffffff, #f7f7f7);
+  border-bottom: 1px solid #d9d9d9;
+}
+.cell:last-child { border-bottom: 0; }
+.cell .grow { flex: 1; min-width: 0; }
+.cell b { display: block; font-size: 15px; font-weight: 600; }
+.cell small { display: block; font-size: 12.5px; color: var(--grey); }
+
+/* ── the tab bar ─────────────────────────────────────────────────────────
+   Dark, glossy, pinned to the bottom. The selected tab glows blue, which is
+   exactly how it was drawn. */
+.tabbar {
+  flex: none; height: var(--tab-h);
+  display: flex;
+  background: linear-gradient(to bottom, #4c4c4c 0%, #2b2b2b 50%, #1c1c1c 51%, #333 100%);
+  box-shadow: 0 -1px 0 rgba(255,255,255,.22) inset, 0 -1px 3px rgba(0,0,0,.4);
+  border-top: 1px solid #101010;
+  z-index: 5;
+}
+.tab {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px;
+  border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 10px; font-weight: 600;
+  color: #9a9a9a;
+  text-shadow: 0 -1px 0 rgba(0,0,0,.6);
+  padding: 0;
+}
+.tab .ico { font-size: 21px; line-height: 1; filter: grayscale(1) opacity(.65); }
+.tab.on { color: #4ea1ff; }
+.tab.on .ico {
+  filter: none;
+  /* The blue bloom under a selected tab. */
+  text-shadow: 0 0 9px rgba(78, 161, 255, .85);
+}
+.tab:active { filter: brightness(1.25); }
+
+/* ── the scrolling area ────────────────────────────────────────────────── */
+.screen { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+ /* !important because .screen.play in app.css sets display:flex at the SAME
+    specificity and loads later, so it was winning — which is why the game
+    stayed visible behind the other tabs. */
+.screen.hidden { display: none !important; }
+
+/* ── modal ───────────────────────────────────────────────────────────────
+   The alert: a rounded block with a hard gloss over the top half. */
+.modal-back {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0,0,0,.45);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.modal-back.show { display: flex; }
+.modal {
+  width: min(310px, 100%);
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,.5);
+  background: linear-gradient(to bottom, #fdfdfd, #dcdcdc);
+  box-shadow: 0 10px 30px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.9) inset;
+  padding: 18px 16px 14px;
+  text-align: center;
+  position: relative; overflow: hidden;
+  animation: pop .18s cubic-bezier(.2,.9,.3,1.2);
+}
+.modal::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 46%;
+  background: linear-gradient(to bottom, rgba(255,255,255,.55), rgba(255,255,255,.05));
+  pointer-events: none;
+}
+@keyframes pop { from { transform: scale(.86); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .modal { animation: none; } }
+.modal h2 { position: relative; margin: 0 0 4px; font-size: 17px; }
+.modal p { position: relative; margin: 0 0 14px; font-size: 13px; color: #555; }

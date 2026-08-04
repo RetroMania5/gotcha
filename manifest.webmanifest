@@ -1,0 +1,16 @@
+{
+  "name": "Gotcha",
+  "short_name": "Gotcha",
+  "description": "Fly through pipes, earn coins, collect capsules.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#4a4a4f",
+  "theme_color": "#2b2b2b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

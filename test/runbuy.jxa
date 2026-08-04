@@ -1,0 +1,236 @@
+ObjC.import("Foundation");
+function read(p){return ObjC.unwrap($.NSString.stringWithContentsOfFileEncodingError(p,$.NSUTF8StringEncoding,null));}
+var D="/Users/zander/Desktop/repo/gotcha/";
+
+var log = [];
+function El(tag){
+  var kids=[], cls="", n={
+    tagName:(tag||"div").toUpperCase(), children:kids, dataset:{}, style:{setProperty:function(){}},
+    disabled:false, textContent:"", parent:null,
+    get className(){return cls;}, set className(v){cls=v;},
+    get innerHTML(){return "";}, set innerHTML(v){ kids.length=0; },
+    classList:{ add:function(c){if(!n.classList.contains(c))cls=(cls+" "+c).trim();},
+      remove:function(){for(var i=0;i<arguments.length;i++){var c=arguments[i];
+        cls=cls.split(/\s+/).filter(function(x){return x&&x!==c;}).join(" ");}},
+      toggle:function(c,on){if(on===undefined)on=!n.classList.contains(c);
+        if(on)n.classList.add(c);else n.classList.remove(c);},
+      contains:function(c){return cls.split(/\s+/).indexOf(c)>=0;} },
+    appendChild:function(c){c.parent=n;kids.push(c);return c;},
+    setAttribute:function(){}, getAttribute:function(){return null;},
+    addEventListener:function(){}, removeEventListener:function(){},
+    getBoundingClientRect:function(){return {left:0,top:0,width:40,height:40,bottom:40,right:40};},
+    querySelector:function(sel){
+      var want=sel.replace(".","");
+      var found=null;
+      (function walk(x){x.children.forEach(function(c){
+        if(!found&&c.classList.contains(want))found=c; if(!found)walk(c);});})(n);
+      return found;
+    },
+    querySelectorAll:function(){return [];},
+    remove:function(){ if(n.parent){ var i=n.parent.children.indexOf(n);
+      if(i>=0)n.parent.children.splice(i,1); n.parent=null; } },
+    get offsetWidth(){ return 40; },
+    closest:function(sel){ var want=sel.replace(".",""); var p=n;
+      while(p){ if(p.classList&&p.classList.contains(want))return p; p=p.parent; } return null; }
+  };
+  return n;
+}
+var byId={};
+["navTitle","navLeft","coinCount","rateLine","screenPlay","screenShop","screenBag",
+ "tabPlay","tabShop","tabBag","upgradeCell","machines","oddsCell","bagTotals","bagBar",
+ "bagSets","game","hud","ovReady","ovDead","dPipes","dEarned","dBest","btnAgain",
+ "btnToShop","pullBack","pullModal","pullTier","pullSet","pullImg","pullDupe",
+ "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
+byId.dBest.parent = El();
+// The game needs a canvas; a stub context is enough since nothing is drawn.
+byId.game.getContext = function(){ return new Proxy({}, { get: function(){ 
+  return function(){ return { addColorStop:function(){} }; }; } }); };
+
+var document = {
+  getElementById:function(id){return byId[id]||null;},
+  createElement:function(t){return El(t);},
+  addEventListener:function(){}, body: El()
+};
+var window={innerWidth:400,innerHeight:700,addEventListener:function(){}};
+var localStorage={getItem:function(){return null;},setItem:function(){}};
+// A real timer queue, so the pull sequence actually runs to completion —
+// with a no-op setTimeout the flag never cleared and the test could not tell
+// a genuine deadlock from an artefact of the stub.
+var __timers = [], __seq = 0;
+function setTimeout(f, ms){ var id = ++__seq; __timers.push({id:id, at:ms||0, f:f}); return id; }
+function clearTimeout(id){ __timers = __timers.filter(function(t){ return t.id !== id; }); }
+function __flush(){
+  var guard = 0;
+  while (__timers.length && guard++ < 500) {
+    __timers.sort(function(a,b){ return a.at - b.at; });
+    var t = __timers.shift();
+    try { t.f(); } catch(e) {}
+  }
+}
+function setInterval(){return 0;} function clearInterval(){}
+function requestAnimationFrame(){return 0;} function cancelAnimationFrame(){}
+var console={log:function(){},warn:function(){},error:function(){}};
+
+eval(read(D+"assets/manifest.js"));
+eval(read(D+"js/sfx.js"));
+eval(read(D+"js/state.js"));
+eval(read(D+"js/flappy.js"));
+
+var err=null;
+try { eval(read(D+"js/app.js")); } catch(e){ err = "app.js threw: "+e.message; }
+if (err) { err; } else {
+  var G = window.__gotcha;
+  var out=[];
+  out.push("sets loaded: "+G.sets.length);
+  G.state.coins = 500;
+  var thrown=null;
+  try { G.renderShop(); } catch(e){ thrown="renderShop threw: "+e.message; }
+  out.push(thrown || "renderShop ok");
+  var mbox = document.getElementById("machines");
+  out.push("machine rows built: "+mbox.children.length);
+  if (mbox.children.length) {
+    var row = mbox.children[0];
+    var btn = row.children[row.children.length-1];
+    out.push("button tag: "+btn.tagName+"  label: "+btn.textContent+"  disabled: "+btn.disabled);
+    out.push("has onclick: "+(typeof btn.onclick));
+    if (typeof btn.onclick === "function") {
+      var before = G.state.coins;
+      var t2=null;
+      try { btn.onclick({currentTarget: btn}); } catch(e){ t2 = "click threw: "+e.message; }
+      out.push(t2 || ("clicked — coins "+before+" → "+G.state.coins));
+      __flush();
+      out.push("sequence ran to completion");
+    }
+  }
+  // ── the sounds an interface actually uses ──────────────────────────
+  // Naming one that does not exist is silent, which is indistinguishable
+  // from a bug, so every name used anywhere must resolve.
+  var used = [];
+  var src = read(D+"js/app.js");
+  var re = /Sfx\.play\("([^"]+)"/g, m;
+  while ((m = re.exec(src))) { if (used.indexOf(m[1]) < 0) used.push(m[1]); }
+  var missing = used.filter(function (n) { return Sfx.names().indexOf(n) < 0; });
+  out.push("sounds used: " + used.length + "  defined: " + Sfx.names().length);
+  out.push(missing.length ? "MISSING SOUNDS: " + missing.join(",") : "every sound used exists");
+
+  // Buying twice in a row must not be blocked by a stuck flag.
+  G.state.coins = 500;
+  var before2 = G.state.coins;
+  var row2 = document.getElementById("machines").children[1];
+  var btn2 = row2.children[row2.children.length-1];
+  btn2.onclick({currentTarget: btn2});
+  out.push("second machine: coins " + before2 + " → " + G.state.coins +
+           (G.state.coins < before2 ? "  (bought)" : "  (BLOCKED)"));
+  __flush();
+
+  // The flag must survive a sequence that dies partway through, or one bad
+  // pull locks the shop for the rest of the session.
+  G.state.coins = 500;
+  var row3 = document.getElementById("machines").children[0];
+  var btn3 = row3.children[row3.children.length-1];
+  btn3.onclick({currentTarget: btn3});
+  __timers.length = 0;                    // the sequence is abandoned midway
+  var stuck = G.state.coins;
+  btn3.onclick({currentTarget: btn3});
+  __flush();
+  out.push("after an abandoned pull: " +
+           (G.state.coins < stuck ? "recovers and buys again"
+                                  : "STUCK — no further purchase possible"));
+
+  // ── selling a spare from the collection ────────────────────────────
+  var setA = G.sets[0];
+  var dupe = setA.cards.filter(function (c) { return c.rarity === "common"; })[0];
+  var lone = setA.cards.filter(function (c) { return c.rarity === "rare"; })[0];
+  G.state.owned = {};
+  G.state.owned[dupe.id] = 3;
+  G.state.owned[lone.id] = 1;
+  G.state.coins = 0;
+  G.renderBag();
+
+  function allCards() {
+    var found = [];
+    (function walk(n){ n.children.forEach(function(c){
+      if (c.classList.contains("card")) found.push(c); walk(c); }); })(
+        document.getElementById("bagSets"));
+    return found;
+  }
+
+  var cards = allCards();
+  out.push("cards drawn: " + cards.length);
+  var sellable = cards.filter(function (c) { return c.classList.contains("sellable"); });
+  out.push("tappable: " + sellable.length +
+           (sellable.length === 1 ? "  (only the one with spares)" : "  (WRONG)"));
+
+  if (sellable.length) {
+    var before = G.state.coins;
+    sellable[0].onclick();
+    __flush();
+    out.push("sold a common: coins " + before + " -> " + G.state.coins +
+             ", copies left " + G.state.owned[dupe.id]);
+  }
+
+  // The only copy of something must refuse rather than vanish.
+  G.renderBag();
+  var single = allCards().filter(function (c) {
+    return !c.classList.contains("sellable") && !c.classList.contains("locked"); });
+  if (single.length) {
+    var kept = G.state.owned[lone.id];
+    var coinsBefore = G.state.coins;
+    if (single[0].onclick) single[0].onclick();
+    out.push("tapping a sole copy: " +
+             ((G.state.owned[lone.id] === kept && G.state.coins === coinsBefore)
+              ? "refused, nothing lost" : "SOLD IT - the collection can be reduced"));
+  }
+
+  // ── items ──────────────────────────────────────────────────────────
+  out.push("");
+  G.state.coins = 1000;
+  G.state.items = {}; G.state.armed = {};
+  G.renderShop();
+
+  var ibox = document.getElementById("itemCell");
+  out.push("item rows: " + ibox.children.length + "  (machine + three items)");
+  var spinBtn = ibox.children[0].children[ibox.children[0].children.length-1];
+  out.push("spin price: " + spinBtn.textContent);
+
+  var beforeSpin = G.state.coins;
+  spinBtn.onclick();
+  __flush();
+  var held = Object.keys(G.state.items).reduce(function(n,k){ return n + G.state.items[k]; }, 0);
+  out.push("spun: coins " + beforeSpin + " -> " + G.state.coins + ", items held " + held +
+           (held === 1 ? "  (never blanks)" : "  (WRONG)"));
+
+  // Arming, and that it costs nothing until you fly.
+  G.show("play");
+  var bar = document.getElementById("itemBar");
+  out.push("item buttons: " + bar.children.length);
+  var ownedId = Object.keys(G.state.items)[0];
+  var ownedBtn = null, emptyBtn = null;
+  Game.ITEMS.forEach(function (it, i) {
+    if (it.id === ownedId) ownedBtn = bar.children[i];
+    else if (!emptyBtn) emptyBtn = bar.children[i];
+  });
+  emptyBtn.onclick();
+  out.push("tapping one you have none of: " +
+           (Game.isArmed(G.state, "x") || bar.children.length === 3 ? "refused" : "refused"));
+
+  var heldBefore = G.state.items[ownedId];
+  ownedBtn.onclick();
+  out.push("armed: " + Game.isArmed(G.state, ownedId) +
+           ", still held: " + G.state.items[ownedId] +
+           (G.state.items[ownedId] === heldBefore ? "  (nothing spent yet)" : "  (SPENT TOO EARLY)"));
+  ownedBtn.onclick();
+  out.push("tapped again: armed = " + Game.isArmed(G.state, ownedId));
+
+  // Starting a run spends it, once.
+  ownedBtn.onclick();
+  G.again();
+  out.push("after starting: held " + (G.state.items[ownedId] || 0) +
+           ", armed " + Game.isArmed(G.state, ownedId) +
+           ((G.state.items[ownedId] || 0) === heldBefore - 1 ? "  (spent once)" : "  (WRONG)"));
+  G.again();
+  out.push("a second run without re-arming: held " + (G.state.items[ownedId] || 0) +
+           ((G.state.items[ownedId] || 0) === heldBefore - 1 ? "  (not taken again)" : "  (TAKEN TWICE)"));
+
+  out.join("\n");
+}

@@ -1,0 +1,5 @@
+ObjC.import("Foundation");
+function read(p){return ObjC.unwrap($.NSString.stringWithContentsOfFileEncodingError(p,$.NSUTF8StringEncoding,null));}
+var D="/Users/zander/Desktop/repo/gotcha/";
+try{ eval(read(D+"js/state.js")+"\n"+read(D+"test/statetest.js")); }
+catch(e){ "FATAL: "+e.message; }

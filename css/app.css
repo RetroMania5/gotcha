@@ -1,0 +1,625 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Gotcha — layout. The iOS vocabulary is in ios.css.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.phone {
+  height: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  display: flex; flex-direction: column;
+  background: transparent;
+  box-shadow: 0 0 40px rgba(0,0,0,.4);
+}
+
+/* ── the game ────────────────────────────────────────────────────────── */
+.screen.play { overflow: hidden; display: flex; }
+.stage { flex: 1; position: relative; min-height: 0; }
+#game { width: 100%; height: 100%; display: block; touch-action: none; }
+
+.hud {
+  position: absolute; top: 14px; left: 0; right: 0;
+  text-align: center;
+  font-size: 44px; font-weight: 800; color: #fff;
+  /* A hard outline rather than a blur — a soft shadow disappears against the
+     bright sky, and this is the one number that must always be readable. */
+  text-shadow:
+    -2px -2px 0 rgba(0,0,0,.55), 2px -2px 0 rgba(0,0,0,.55),
+    -2px  2px 0 rgba(0,0,0,.55), 2px  2px 0 rgba(0,0,0,.55),
+     0 3px 6px rgba(0,0,0,.35);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+#ovReady { pointer-events: none; }
+
+.tapcard {
+  text-align: center;
+  padding: 16px 26px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.42);
+  border: 1px solid rgba(255,255,255,.28);
+  color: #fff;
+  animation: breathe 1.8s ease-in-out infinite;
+}
+.tapcard b { display: block; font-size: 20px; }
+.tapcard span { font-size: 13px; opacity: .85; }
+@keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+@media (prefers-reduced-motion: reduce) { .tapcard { animation: none; } }
+
+.deadcard {
+  width: min(290px, 100%);
+  padding: 18px 16px 15px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,.45);
+  background: linear-gradient(to bottom, #fdfdfd, #dcdcdc);
+  box-shadow: 0 10px 28px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.9) inset;
+  text-align: center;
+}
+.deadcard h2 { margin: 0 0 12px; font-size: 19px; text-shadow: 0 1px 0 rgba(255,255,255,.85); }
+.deadstats { display: flex; gap: 8px; margin-bottom: 14px; }
+.deadstats > div {
+  flex: 1;
+  background: rgba(0,0,0,.055);
+  border-radius: 8px; padding: 8px 4px;
+  box-shadow: 0 1px 1px rgba(0,0,0,.1) inset;
+}
+.deadstats b { display: block; font-size: 19px; font-variant-numeric: tabular-nums; }
+.deadstats span { font-size: 10.5px; color: #777; text-transform: uppercase; letter-spacing: .4px; }
+
+/* ── shop ────────────────────────────────────────────────────────────── */
+.row { display: flex; align-items: center; }
+.cell .price {
+  font-size: 13px; font-weight: 700; color: #6b4c00;
+  font-variant-numeric: tabular-nums;
+}
+.machine-art {
+  width: 46px; height: 46px; flex: none;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: #fff;
+  border: 1px solid rgba(0,0,0,.3);
+  box-shadow: 0 1px 0 rgba(255,255,255,.4) inset, 0 1px 2px rgba(0,0,0,.25);
+}
+.odds-row { display: flex; justify-content: space-between; font-size: 13px; padding: 2px 0; }
+.odds-row .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+/* ── collection ──────────────────────────────────────────────────────── */
+.bar {
+  height: 11px; border-radius: 6px;
+  background: rgba(0,0,0,.12);
+  box-shadow: 0 1px 1px rgba(0,0,0,.16) inset;
+  overflow: hidden;
+}
+.bar > span {
+  display: block; height: 100%; width: 0;
+  background: linear-gradient(to bottom, #6fd06f, #2fa32f);
+  box-shadow: 0 1px 0 rgba(255,255,255,.35) inset;
+  transition: width .3s;
+}
+@media (prefers-reduced-motion: reduce) { .bar > span { transition: none; } }
+
+.bag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 8px;
+  padding: 10px;
+}
+
+/* Each card is a box whose colour IS the rarity — that is the only place the
+   rarity is shown, so it has to be unmistakable. */
+.card {
+  border-radius: 9px;
+  padding: 6px 5px 5px;
+  text-align: center;
+  border: 2px solid;
+  background: linear-gradient(to bottom, #ffffff, #eeeeee);
+  box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  position: relative;
+}
+.card.common    { border-color: #8e8e93; }
+.card.rare      { border-color: #3478f6; box-shadow: 0 0 7px rgba(52,120,246,.4), 0 1px 2px rgba(0,0,0,.25); }
+.card.veryrare  { border-color: #e0352b; box-shadow: 0 0 9px rgba(224,53,43,.45), 0 1px 2px rgba(0,0,0,.25); }
+.card.legendary {
+  border-color: #e8a317;
+  box-shadow: 0 0 13px rgba(232,163,23,.6), 0 1px 2px rgba(0,0,0,.25);
+  background: linear-gradient(to bottom, #fffaf0, #ffeec4);
+}
+.card img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; }
+/* Not yet found: a silhouette, so the shape teases without giving it away. */
+.card.locked img { filter: brightness(0) opacity(.16); }
+.card.locked { opacity: .75; background: linear-gradient(to bottom, #f2f2f2, #e2e2e2); }
+.card .n {
+  font-size: 11.5px; font-weight: 700; color: #444;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.card.locked .n { color: #aaa; }
+
+.pullart {
+  width: 168px; height: 168px; margin: 4px auto 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  background: rgba(0,0,0,.05);
+  box-shadow: 0 1px 2px rgba(0,0,0,.14) inset;
+  position: relative;
+}
+.pullart img { max-width: 92%; max-height: 92%; object-fit: contain; }
+
+/* ── machine previews ────────────────────────────────────────────────────
+   Each machine cycles through what is inside it, in its own colour. */
+.machine-art { position: relative; overflow: hidden; }
+.machine-art .peek {
+  position: absolute; inset: 5px;
+  width: calc(100% - 10px); height: calc(100% - 10px);
+  object-fit: contain;
+  opacity: 0;
+}
+/* The fade is restarted from JS on every change, so it has to be an
+   animation rather than a transition. */
+.machine-art .peek.in { animation: peek 1.25s ease both; }
+@keyframes peek {
+  0%   { opacity: 0; transform: scale(.82); }
+  18%  { opacity: 1; transform: scale(1); }
+  78%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.06); }
+}
+/* Very rare and legendary are silhouettes: you can see there is something
+   there without the surprise being spent before you pay. */
+.machine-art .peek.blackout { filter: brightness(0) opacity(.55); }
+@media (prefers-reduced-motion: reduce) {
+  .machine-art .peek.in { animation: none; opacity: 1; }
+}
+
+/* ── the capsule ─────────────────────────────────────────────────────────
+   Out of the machine, up to the middle, big, then open. Above everything,
+   and never in the way of a tap. */
+.capsule-stage {
+  position: fixed; inset: 0; z-index: 60;
+  pointer-events: none;
+  display: none;
+}
+.capsule-stage.show { display: block; }
+
+.capsule {
+  position: absolute;
+  width: 62px; height: 62px;
+  margin: -31px 0 0 -31px;      /* centred on its own left/top */
+  transform: scale(.3);
+  opacity: 0;
+  /* Two separate curves: the flight is a long ease, the growth overshoots
+     slightly so it lands with some weight. */
+  transition:
+    left .72s cubic-bezier(.3,.05,.2,1),
+    top .72s cubic-bezier(.3,.05,.2,1),
+    transform .72s cubic-bezier(.34,1.3,.4,1),
+    opacity .18s linear;
+}
+.capsule.out { opacity: 1; transform: scale(1); }
+.capsule.big { transform: scale(3.9); }
+
+/* The two halves. Together they are a sphere; apart, they are a shell. */
+.cap-half {
+  position: absolute; left: 0; width: 100%; height: 50%;
+  background: linear-gradient(to bottom, var(--hi), var(--lo));
+  border: 1.5px solid rgba(0,0,0,.35);
+  transition: transform .55s cubic-bezier(.3,.9,.3,1), opacity .55s;
+}
+.cap-half.top {
+  top: 0;
+  border-radius: 31px 31px 4px 4px;
+  border-bottom: 0;
+  /* The specular blob that makes plastic look like plastic. */
+  background-image:
+    radial-gradient(ellipse at 32% 26%, rgba(255,255,255,.85), rgba(255,255,255,0) 58%),
+    linear-gradient(to bottom, var(--hi), var(--lo));
+}
+.cap-half.bot {
+  bottom: 0;
+  border-radius: 4px 4px 31px 31px;
+  border-top: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,.92), rgba(214,214,214,.92));
+}
+.cap-seam {
+  position: absolute; left: -2px; right: -2px; top: 50%; height: 5px;
+  margin-top: -2.5px;
+  background: linear-gradient(to bottom, rgba(0,0,0,.32), rgba(0,0,0,.12));
+  border-radius: 3px;
+  transition: opacity .3s;
+}
+
+.capsule.shake { animation: rattle .16s linear infinite; }
+@keyframes rattle {
+  0%,100% { margin-left: -31px; }
+  25% { margin-left: -35px; }
+  75% { margin-left: -27px; }
+}
+
+/* Open: the halves fly apart, the prize appears, and the whole thing glows
+   whatever the rarity is. */
+.capsule.open .cap-half.top { transform: translateY(-92px) rotate(-24deg); opacity: 0; }
+.capsule.open .cap-half.bot { transform: translateY(92px) rotate(18deg); opacity: 0; }
+.capsule.open .cap-seam { opacity: 0; }
+
+.cap-prize {
+  position: absolute; inset: 6px;
+  width: calc(100% - 12px); height: calc(100% - 12px);
+  object-fit: contain;
+  opacity: 0; transform: scale(.5);
+  transition: opacity .4s .18s, transform .5s .18s cubic-bezier(.3,1.4,.4,1);
+}
+.capsule.open .cap-prize {
+  opacity: 1; transform: scale(1.5);
+  /* The glow IS the rarity — it is the first thing you see, before any text. */
+  filter: drop-shadow(0 0 10px var(--glow)) drop-shadow(0 0 26px var(--glow));
+}
+
+/* A burst behind it at the moment it opens. */
+.capsule.open::after {
+  content: "";
+  position: absolute; inset: -40%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow), transparent 62%);
+  opacity: .55;
+  animation: burst .75s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes burst {
+  from { transform: scale(.3); opacity: .8; }
+  to   { transform: scale(1.5); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capsule, .cap-half, .cap-prize { transition: none; }
+  .capsule.shake { animation: none; }
+  .capsule.open::after { animation: none; opacity: 0; }
+}
+
+/* The result card carries the same glow the capsule opened with, so the two
+   read as one moment rather than two screens. */
+.modal.rare      { box-shadow: 0 0 24px rgba(52,120,246,.55), 0 10px 30px rgba(0,0,0,.5); }
+.modal.veryrare  { box-shadow: 0 0 28px rgba(224,53,43,.6), 0 10px 30px rgba(0,0,0,.5); }
+.modal.legendary { box-shadow: 0 0 34px rgba(232,163,23,.75), 0 10px 30px rgba(0,0,0,.5); }
+.modal.legendary .pullart { background: radial-gradient(circle, rgba(232,163,23,.22), transparent 70%); }
+.modal.veryrare  .pullart { background: radial-gradient(circle, rgba(224,53,43,.18), transparent 70%); }
+.modal.rare      .pullart { background: radial-gradient(circle, rgba(52,120,246,.18), transparent 70%); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   The gachapon machine
+
+   Drawn rather than drawn-on: a glass dome full of capsules over a coloured
+   body with a dial and a chute. Every part takes its colour from the machine
+   being used, so the same markup serves all six.
+   ═══════════════════════════════════════════════════════════════════════ */
+.machine {
+  position: absolute;
+  left: 50%; bottom: 8%;
+  width: 190px;
+  margin-left: -95px;
+  transform: translateY(130%);
+  transition: transform .42s cubic-bezier(.25,1.15,.4,1);
+}
+.machine.up { transform: translateY(0); }
+.machine.away { transform: translateY(130%); transition-duration: .3s; }
+
+/* The dome. A sphere is a radial highlight plus a rim shadow — the tint is
+   only the third thing you notice. */
+.dome {
+  position: relative;
+  height: 118px;
+  border-radius: 95px 95px 14px 14px;
+  background:
+    radial-gradient(ellipse at 32% 22%, rgba(255,255,255,.95), rgba(255,255,255,.12) 46%),
+    radial-gradient(ellipse at 70% 84%, rgba(0,0,0,.22), rgba(0,0,0,0) 58%),
+    rgba(226,240,248,.5);
+  border: 2px solid rgba(255,255,255,.75);
+  box-shadow: 0 3px 10px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.18);
+  overflow: hidden;
+}
+/* Capsules inside, in the machine's colour. Half-height circles so they read
+   as a heap rather than a scatter. */
+.dome i {
+  position: absolute;
+  width: 26px; height: 26px; border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255,255,255,.9), rgba(255,255,255,0) 55%),
+    linear-gradient(to bottom, var(--hi), var(--lo));
+  box-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+.dome i:nth-child(1) { left: 14%; bottom: 6px; }
+.dome i:nth-child(2) { left: 38%; bottom: 4px; }
+.dome i:nth-child(3) { left: 62%; bottom: 7px; }
+.dome i:nth-child(4) { left: 26%; bottom: 28px; }
+.dome i:nth-child(5) { left: 51%; bottom: 30px; }
+.dome i:nth-child(6) { left: 72%; bottom: 26px; opacity: .85; }
+.dome i:nth-child(7) { left: 39%; bottom: 52px; opacity: .7; }
+
+/* The body, in the machine's colour. */
+.body {
+  position: relative;
+  height: 82px;
+  border-radius: 6px 6px 10px 10px;
+  background: linear-gradient(to bottom, var(--hi), var(--lo));
+  border: 1px solid rgba(0,0,0,.35);
+  box-shadow: 0 1px 0 rgba(255,255,255,.45) inset, 0 4px 12px rgba(0,0,0,.4);
+}
+
+/* The dial. It turns a full circle when you pull. */
+.dial {
+  position: absolute; left: 50%; top: 12px;
+  width: 40px; height: 40px; margin-left: -20px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, #fff, rgba(255,255,255,0) 52%),
+    linear-gradient(to bottom, #e8e8e8, #a8a8a8);
+  border: 2px solid rgba(0,0,0,.4);
+  box-shadow: 0 1px 3px rgba(0,0,0,.35) inset;
+  transition: transform .62s cubic-bezier(.3,.05,.2,1);
+}
+/* The handle, so the rotation is visible — a plain disc turning looks static. */
+.dial::after {
+  content: "";
+  position: absolute; left: 50%; top: 5px;
+  width: 5px; height: 15px; margin-left: -2.5px;
+  border-radius: 3px;
+  background: linear-gradient(to bottom, #6a6a6a, #333);
+}
+.machine.turn .dial { transform: rotate(400deg); }
+
+/* The chute, where the capsule appears. */
+.chute {
+  position: absolute; left: 50%; bottom: 8px;
+  width: 66px; height: 26px; margin-left: -33px;
+  border-radius: 5px 5px 8px 8px;
+  background: linear-gradient(to bottom, rgba(0,0,0,.62), rgba(0,0,0,.34));
+  box-shadow: 0 2px 4px rgba(0,0,0,.4) inset;
+  border: 1px solid rgba(0,0,0,.45);
+}
+
+.machine.rattle { animation: mrattle .1s linear 6; }
+@keyframes mrattle {
+  0%,100% { margin-left: -95px; }
+  50% { margin-left: -91px; }
+}
+
+/* The shop steps back while this is happening, so the machine is the only
+   thing on screen. */
+.screen.busy {
+  opacity: 0;
+  transform: scale(.96);
+  transition: opacity .22s, transform .22s;
+  pointer-events: none;
+}
+.screen { transition: opacity .22s, transform .22s; }
+
+/* A dim wash behind the machine, so it reads as its own moment rather than
+   as something floating over the shop. */
+.capsule-stage::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 60%, rgba(20,22,30,.55), rgba(10,11,16,.9));
+  opacity: 0;
+  transition: opacity .28s;
+}
+.capsule-stage.dim::before { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .machine, .dial, .screen { transition: none; }
+  .machine.rattle { animation: none; }
+}
+
+/* A button you cannot afford. Still clickable, so pressing it can say no —
+   a control that does nothing at all reads as broken rather than as locked. */
+.btn.cant {
+  opacity: .45;
+  filter: grayscale(.6);
+  cursor: default;
+}
+.btn.cant:active { filter: grayscale(.6) brightness(.95); }
+
+/* ── selling a spare ─────────────────────────────────────────────────────
+   Cards you have more than one of are tappable, and say so. */
+.card.sellable { cursor: pointer; }
+.card.sellable:active { transform: scale(.94); }
+
+/* The price, tucked in the corner — visible enough to invite a tap, small
+   enough not to compete with the picture. */
+.sell-tag {
+  position: absolute; top: 3px; right: 3px;
+  font-size: 9.5px; font-weight: 800;
+  color: #6b4c00;
+  background: linear-gradient(to bottom, #ffe89a, #f5c231);
+  border: 1px solid #c9a227;
+  border-radius: 7px;
+  padding: 1px 5px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.7) inset;
+  pointer-events: none;
+}
+
+/* The card flashing white as it gives up a copy. */
+.card.pop { animation: cardpop .34s ease-out; }
+@keyframes cardpop {
+  0%   { transform: scale(1); filter: brightness(1); }
+  22%  { transform: scale(1.16); filter: brightness(2.6); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* A refusal: a short shake, so a dead tap still answers. */
+.card.nudge { animation: nudge .3s ease; }
+@keyframes nudge {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* ── the explosion ───────────────────────────────────────────────────────
+   Particles are positioned absolutely and given their own direction, so each
+   flies its own way — a single keyframe would send them all to the same
+   place. */
+.burst-layer {
+  position: fixed; inset: 0; z-index: 55;
+  pointer-events: none;
+  overflow: hidden;
+}
+.spark {
+  position: absolute;
+  width: 7px; height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 2px;
+  box-shadow: 0 0 6px currentColor;
+  animation: spark .6s cubic-bezier(.15,.7,.35,1) forwards;
+}
+@keyframes spark {
+  0%   { transform: translate(0,0) rotate(0deg) scale(1.15); opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(.25);
+         opacity: 0; }
+}
+
+.float-coin {
+  position: absolute;
+  margin-left: -22px;
+  width: 44px; text-align: center;
+  font-size: 15px; font-weight: 800;
+  color: #ffd54f;
+  text-shadow: 0 1px 0 rgba(0,0,0,.5), 0 0 8px rgba(255,213,79,.8);
+  animation: floatup .9s cubic-bezier(.2,.8,.3,1) forwards;
+}
+@keyframes floatup {
+  0%   { transform: translateY(0) scale(.7); opacity: 0; }
+  18%  { transform: translateY(-10px) scale(1.15); opacity: 1; }
+  100% { transform: translateY(-58px) scale(1); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card.pop, .card.nudge, .spark, .float-coin { animation-duration: .01s; }
+  .card.sellable:active { transform: none; }
+}
+
+/* ── items in the shop ───────────────────────────────────────────────────*/
+.item-chip {
+  width: 34px; height: 34px; flex: none;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; color: #fff;
+  border: 1px solid rgba(0,0,0,.3);
+  box-shadow: 0 1px 0 rgba(255,255,255,.4) inset, 0 1px 2px rgba(0,0,0,.25);
+  text-shadow: 0 1px 2px rgba(0,0,0,.45);
+}
+.item-row.none .item-chip { filter: grayscale(1) opacity(.55); }
+.item-have {
+  font-size: 15px; font-weight: 800; color: #444;
+  font-variant-numeric: tabular-nums;
+  min-width: 24px; text-align: right;
+}
+.item-row.none .item-have { color: #b4b4b4; }
+
+/* ── the slot machine ────────────────────────────────────────────────────
+   Three reels that stop left to right. Stopping them together would be a
+   still image rather than a spin. */
+.slot {
+  position: absolute; left: 50%; top: 42%;
+  width: 268px; margin-left: -134px;
+  transform: translateY(-50%);
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+  background: linear-gradient(to bottom, #6b76e0, #2b338a);
+  border: 2px solid rgba(0,0,0,.45);
+  box-shadow: 0 1px 0 rgba(255,255,255,.4) inset, 0 14px 34px rgba(0,0,0,.55);
+  text-align: center;
+  animation: slotIn .28s cubic-bezier(.2,1.2,.4,1);
+}
+@keyframes slotIn { from { transform: translateY(-50%) scale(.85); opacity: 0; }
+                    to   { transform: translateY(-50%) scale(1); opacity: 1; } }
+.slot-top {
+  font-size: 11px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase; color: rgba(255,255,255,.8);
+  text-shadow: 0 -1px 0 rgba(0,0,0,.4);
+  margin-bottom: 9px;
+}
+.reels {
+  display: flex; gap: 7px;
+  padding: 8px;
+  border-radius: 10px;
+  background: linear-gradient(to bottom, rgba(0,0,0,.42), rgba(0,0,0,.22));
+  box-shadow: 0 2px 5px rgba(0,0,0,.4) inset;
+}
+.reel {
+  flex: 1; height: 66px;
+  border-radius: 7px;
+  background: linear-gradient(to bottom, #fff, #d8d8d8);
+  border: 1px solid rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px;
+  overflow: hidden;
+  /* A soft band top and bottom, so the reel reads as a drum rather than a
+     flat tile with a symbol on it. */
+  box-shadow:
+    0 7px 9px -7px rgba(0,0,0,.55) inset,
+    0 -7px 9px -7px rgba(0,0,0,.55) inset;
+}
+.reel span { display: block; line-height: 1; }
+.reel.stopped { animation: reelStop .22s cubic-bezier(.3,1.6,.4,1); }
+@keyframes reelStop {
+  0% { transform: translateY(-9px); } 100% { transform: translateY(0); }
+}
+.slot-name {
+  min-height: 20px; margin-top: 9px;
+  font-size: 15px; font-weight: 800; color: #fff;
+  text-shadow: 0 -1px 0 rgba(0,0,0,.45);
+  opacity: 0; transform: scale(.8);
+  transition: opacity .25s, transform .25s cubic-bezier(.3,1.5,.4,1);
+}
+.slot.won .slot-name { opacity: 1; transform: scale(1); }
+.slot.won .reels { box-shadow: 0 0 16px rgba(255,213,79,.85) inset, 0 2px 5px rgba(0,0,0,.4) inset; }
+
+/* ── the item bar before a run ───────────────────────────────────────────*/
+.item-bar {
+  position: absolute; left: 0; right: 0; bottom: 10px;
+  display: flex; gap: 7px;
+  padding: 0 10px;
+  z-index: 3;
+}
+.item-btn {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 7px 4px 5px;
+  border-radius: 10px;
+  border: 2px solid rgba(0,0,0,.35);
+  background: linear-gradient(to bottom, rgba(255,255,255,.9), rgba(228,228,228,.86));
+  box-shadow: 0 1px 0 rgba(255,255,255,.7) inset, 0 2px 5px rgba(0,0,0,.32);
+  font: inherit; cursor: pointer;
+  position: relative;
+}
+.item-btn .ib-icon { font-size: 19px; line-height: 1; color: var(--tint); }
+.item-btn .ib-name { font-size: 9.5px; font-weight: 700; color: #444; }
+.item-btn .ib-n {
+  position: absolute; top: 2px; right: 5px;
+  font-size: 10px; font-weight: 800; color: #666;
+  font-variant-numeric: tabular-nums;
+}
+/* None held: dimmed, but still visible — knowing an item exists is half the
+   reason to go and buy one. */
+.item-btn.empty { filter: grayscale(1); opacity: .45; cursor: default; }
+/* Armed: lit in its own colour, so which ones are on is readable at a glance
+   without reading any labels. */
+.item-btn.armed {
+  border-color: var(--tint);
+  background: linear-gradient(to bottom, #fff, #ffeeb8);
+  box-shadow: 0 0 11px var(--tint), 0 1px 0 rgba(255,255,255,.8) inset;
+}
+.item-btn.armed .ib-name { color: #222; }
+.item-btn:active:not(.empty) { transform: scale(.95); }
+
+/* Hidden once you are flying — it is a pre-run choice, and three buttons over
+   the pipes would just be in the way. */
+.playing .item-bar, .dead .item-bar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slot, .reel.stopped, .slot-name { animation: none; transition: none; }
+  .item-btn:active:not(.empty) { transform: none; }
+}
