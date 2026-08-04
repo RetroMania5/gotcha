@@ -641,3 +641,47 @@
   .slot, .reel.stopped, .slot-name { animation: none; transition: none; }
   .item-btn:active:not(.empty) { transform: none; }
 }
+
+/* ── ten at a time ─────────────────────────────────────────────────────── */
+/* One pull or ten, stacked so the row stays the same height as the others. */
+.buy-stack {
+  display: flex; flex-direction: column; gap: 4px;
+  align-items: stretch; flex: 0 0 auto;
+}
+.buy-stack .btn { margin: 0; }
+/* The ten reads as the bigger commitment, so it is the quieter button — the
+   single pull stays the default. */
+.btn.ten {
+  background: linear-gradient(to bottom, #d8d8e4, #b6b6c6);
+  border-color: rgba(0,0,0,.28);
+  font-size: 11px;
+}
+
+/* Where the batch lands: smaller than a single pull's centre-screen capsule,
+   because ten of those would not fit. */
+.capsule.spread { transform: scale(var(--s, 1)); }
+
+/* The whiteout. It turns ten small reveals into one big one, and it hides the
+   cut to the card-by-card walkthrough. */
+.whiteout {
+  position: fixed; inset: 0;
+  background: #fff;
+  opacity: 0;
+  transition: opacity .42s ease-in;
+  pointer-events: none;
+  z-index: 40;
+}
+.whiteout.on { opacity: 1; }
+
+/* Which card of the batch you are looking at. Empty on a single pull. */
+.pull-count {
+  margin: 0 0 2px;
+  font-size: 11px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase;
+  color: #8e8e93;
+  min-height: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whiteout { transition: none; }
+}

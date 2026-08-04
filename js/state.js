@@ -345,6 +345,33 @@ var Game = (function () {
     return { ok: true, cost: cost, card: card, duplicate: had > 0, count: had + 1 };
   }
 
+  //  Ten at once. Charged for all ten up front rather than one at a time, so
+  //  a batch either happens or does not — being stopped seven pulls in with
+  //  the coins already gone would be the worst of both.
+  //
+  //  Each pull still goes through buyPull in sequence, so pulling the same
+  //  card twice inside one batch reads "New!" and then "that makes 2" rather
+  //  than claiming both are new.
+  var BATCH = 10;
+
+  function buyPullMany(state, set, index, n, rng) {
+    n = Math.max(1, Math.min(BATCH, n | 0));
+    var each = setCost(index);
+    var cost = each * n;
+    if (state.coins < cost) {
+      return { ok: false, reason: "coins", cost: cost, each: each, n: n };
+    }
+    var results = [];
+    for (var i = 0; i < n; i++) {
+      var r = buyPull(state, set, index, rng);
+      if (!r.ok) break;            // an empty set — stop rather than charge on
+      results.push(r);
+    }
+    if (!results.length) return { ok: false, reason: "empty" };
+    var spent = results.reduce(function (t, r) { return t + r.cost; }, 0);
+    return { ok: true, n: results.length, cost: spent, results: results };
+  }
+
   // ── the collection ─────────────────────────────────────────────────────
   function ownedCount(state, id) { return state.owned[id] || 0; }
 
@@ -384,6 +411,7 @@ var Game = (function () {
     tierOdds: tierOdds, pull: pull, setCost: setCost,
     fresh: fresh, load: load, save: save,
     scorePipe: scorePipe, endRun: endRun, buyUpgrade: buyUpgrade, buyPull: buyPull,
+    buyPullMany: buyPullMany, BATCH: BATCH,
     ownedCount: ownedCount, setProgress: setProgress, totals: totals,
   };
 })();

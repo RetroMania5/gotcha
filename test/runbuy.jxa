@@ -8,7 +8,21 @@ function El(tag){
     tagName:(tag||"div").toUpperCase(), children:kids, dataset:{}, style:{setProperty:function(){}},
     disabled:false, textContent:"", parent:null,
     get className(){return cls;}, set className(v){cls=v;},
-    get innerHTML(){return "";}, set innerHTML(v){ kids.length=0; },
+    get innerHTML(){return "";},
+    // Real markup, minimally. The old version threw the content away, so
+    // querySelector(".chute") found nothing, the beat that positions the
+    // capsule threw, and at()'s catch quietly aborted the whole sequence —
+    // which the test then reported as having run to completion.
+    // Flattened: nothing under test looks anything up by nesting.
+    set innerHTML(v){
+      kids.length=0;
+      var re=/<(\w+)([^>]*)>/g, m;
+      while((m=re.exec(String(v)))){
+        var cm=/class="([^"]*)"/.exec(m[2]||"");
+        var c=El(m[1]); if(cm) c.className=cm[1];
+        c.parent=n; kids.push(c);
+      }
+    },
     classList:{ add:function(c){if(!n.classList.contains(c))cls=(cls+" "+c).trim();},
       remove:function(){for(var i=0;i<arguments.length;i++){var c=arguments[i];
         cls=cls.split(/\s+/).filter(function(x){return x&&x!==c;}).join(" ");}},
@@ -40,7 +54,7 @@ var byId={};
  "tabPlay","tabShop","tabBag","upgradeCell","machines","oddsCell","bagTotals","bagBar",
  "bagSets","game","hud","ovReady","ovDead","dPipes","dEarned","dBest","btnAgain",
  "btnToShop","pullBack","pullModal","pullTier","pullSet","pullImg","pullDupe",
- "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar","itemWrap"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
+ "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar","itemWrap","pullCount"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
 byId.dBest.parent = El();
 // The game needs a canvas; a stub context is enough since nothing is drawn.
 byId.game.getContext = function(){ return new Proxy({}, { get: function(){
@@ -53,6 +67,7 @@ var document = {
   addEventListener:function(){}, body: El()
 };
 var window={innerWidth:400,innerHeight:700,addEventListener:function(){}};
+
 var localStorage={getItem:function(){return null;},setItem:function(){}};
 // The service worker registration checks for these; there is none here.
 var navigator={serviceWorker:undefined};
@@ -73,7 +88,11 @@ function __flush(){
 }
 function setInterval(){return 0;} function clearInterval(){}
 function requestAnimationFrame(){return 0;} function cancelAnimationFrame(){}
-var console={log:function(){},warn:function(){},error:function(){}};
+var __warns=[];
+var console={log:function(){},
+  warn:function(){ __warns.push(Array.prototype.slice.call(arguments).join(" ")); },
+  error:function(){ __warns.push(Array.prototype.slice.call(arguments).join(" ")); }};
+window.console = console;
 
 eval(read(D+"assets/manifest.js"));
 eval(read(D+"js/sfx.js"));
@@ -90,11 +109,15 @@ if (err) { err; } else {
   var thrown=null;
   try { G.renderShop(); } catch(e){ thrown="renderShop threw: "+e.message; }
   out.push(thrown || "renderShop ok");
+  // The machine row's buttons now live in a stack: [0] one pull, [1] ×10.
+  function buys(row) { return row.children[row.children.length - 1].children; }
+  function oneBtn(row) { return buys(row)[0]; }
+  function tenBtn(row) { return buys(row)[1]; }
   var mbox = document.getElementById("machines");
   out.push("machine rows built: "+mbox.children.length);
   if (mbox.children.length) {
     var row = mbox.children[0];
-    var btn = row.children[row.children.length-1];
+    var btn = oneBtn(row);
     out.push("button tag: "+btn.tagName+"  label: "+btn.textContent+"  disabled: "+btn.disabled);
     out.push("has onclick: "+(typeof btn.onclick));
     if (typeof btn.onclick === "function") {
@@ -103,7 +126,14 @@ if (err) { err; } else {
       try { btn.onclick({currentTarget: btn}); } catch(e){ t2 = "click threw: "+e.message; }
       out.push(t2 || ("clicked — coins "+before+" → "+G.state.coins));
       __flush();
-      out.push("sequence ran to completion");
+      // Was an unconditional push, which claimed success even when a beat
+      // threw and at()'s catch quietly abandoned the sequence.
+      out.push("sequence ran to completion: " +
+               (document.getElementById("pullBack").className.indexOf("show") >= 0 ?
+                "yes, the reveal opened" : "NO — it aborted partway"));
+      out.push("  no beat threw: " + (__warns.length === 0) +
+               (__warns.length ? "  " + __warns[0] : ""));
+      document.getElementById("pullDone").onclick();
     }
   }
   // ── the sounds an interface actually uses ──────────────────────────
@@ -121,7 +151,7 @@ if (err) { err; } else {
   G.state.coins = 500;
   var before2 = G.state.coins;
   var row2 = document.getElementById("machines").children[1];
-  var btn2 = row2.children[row2.children.length-1];
+  var btn2 = oneBtn(row2);
   btn2.onclick({currentTarget: btn2});
   out.push("second machine: coins " + before2 + " → " + G.state.coins +
            (G.state.coins < before2 ? "  (bought)" : "  (BLOCKED)"));
@@ -131,7 +161,7 @@ if (err) { err; } else {
   // pull locks the shop for the rest of the session.
   G.state.coins = 500;
   var row3 = document.getElementById("machines").children[0];
-  var btn3 = row3.children[row3.children.length-1];
+  var btn3 = oneBtn(row3);
   btn3.onclick({currentTarget: btn3});
   __timers.length = 0;                    // the sequence is abandoned midway
   var stuck = G.state.coins;
@@ -307,6 +337,108 @@ if (err) { err; } else {
   var fx = Game.activeEffects(stacked);
   out.push("  and grants one effect: gap=" + fx.gap + " lives=" + fx.lives + " money=" + fx.money +
            (((fx.gap ? 1 : 0) + fx.lives + (fx.money > 1 ? 1 : 0)) === 1 ? "  (single)" : "  (STACKED)"));
+
+
+  // ── ten at a time ────────────────────────────────────────────────────
+  out.push("");
+  G.show("shop");
+  G.state.coins = 100000;
+  G.renderShop();
+  var mrow = document.getElementById("machines").children[0];
+  var ten = tenBtn(mrow);
+  out.push("×10 button: " + ten.tagName + "  label: " + ten.textContent);
+  out.push("  priced at ten singles: " +
+           (ten.textContent.indexOf(String(Game.setCost(0) * 10)) >= 0));
+
+  var ownedBefore = Object.keys(G.state.owned).reduce(function (t, k) {
+    return t + G.state.owned[k];
+  }, 0);
+  var coinsBefore = G.state.coins;
+  ten.onclick({ currentTarget: ten });
+  __flush();
+  var ownedAfter = Object.keys(G.state.owned).reduce(function (t, k) {
+    return t + G.state.owned[k];
+  }, 0);
+  out.push("cards gained: " + (ownedAfter - ownedBefore) +
+           ((ownedAfter - ownedBefore) === 10 ? "  (ten)" : "  (WRONG)"));
+  out.push("coins spent: " + (coinsBefore - G.state.coins) +
+           ((coinsBefore - G.state.coins) === Game.setCost(0) * 10 ? "  (ten singles)" : "  (WRONG)"));
+
+  // The whole batch must land on screen, not one capsule reused ten times.
+  out.push("the reveal opened: " +
+           (document.getElementById("pullBack").className.indexOf("show") >= 0));
+  out.push("starts at the first: " + document.getElementById("pullCount").textContent);
+
+  // Walk it. "Next" advances; only the last card offers a way out.
+  var nextBtn = document.getElementById("pullAgain");
+  var doneBtn = document.getElementById("pullDone");
+  out.push("mid-batch button reads: " + nextBtn.textContent +
+           ", Done hidden: " + (doneBtn.style.display === "none"));
+  var seen = [document.getElementById("pullImg").src];
+  for (var k = 0; k < 9; k++) {
+    nextBtn.onclick();
+    seen.push(document.getElementById("pullImg").src);
+  }
+  out.push("stepped through: " + document.getElementById("pullCount").textContent);
+  out.push("  showed ten cards: " + (seen.length === 10));
+  out.push("  and every one was actually rendered: " +
+           (seen.filter(function (x) { return !!x; }).length === 10));
+  out.push("on the last: Next hidden " + (nextBtn.style.display === "none") +
+           ", Done shown " + (doneBtn.style.display !== "none") +
+           ", label " + doneBtn.textContent);
+
+  // Pressing Next past the end must not run off the array.
+  nextBtn.onclick();
+  out.push("Next past the end is a no-op: " +
+           (document.getElementById("pullCount").textContent === "10 of 10"));
+
+  doneBtn.onclick();
+  out.push("Done closes it: " +
+           (document.getElementById("pullBack").className.indexOf("show") < 0));
+
+  // A single pull must still say nothing about counts, and keep Again.
+  G.state.coins = 100000;
+  G.renderShop();
+  oneBtn(document.getElementById("machines").children[0]).onclick({
+    currentTarget: oneBtn(document.getElementById("machines").children[0]) });
+  __flush();
+  out.push("single pull count line is blank: " +
+           (document.getElementById("pullCount").textContent === ""));
+  out.push("  and it still offers Again: " +
+           (document.getElementById("pullAgain").textContent.indexOf("Again") === 0));
+  document.getElementById("pullDone").onclick();
+
+  // Two batches back to back — the guard must release.
+  G.state.coins = 100000;
+  G.renderShop();
+  var t2 = tenBtn(document.getElementById("machines").children[1]);
+  var c2 = G.state.coins;
+  t2.onclick({ currentTarget: t2 });
+  __flush();
+  document.getElementById("pullDone").onclick();
+  G.renderShop();
+  var t3 = tenBtn(document.getElementById("machines").children[1]);
+  var c3 = G.state.coins;
+  t3.onclick({ currentTarget: t3 });
+  __flush();
+  out.push("a second batch also goes through: " +
+           (G.state.coins < c3 && c3 < c2 ? "yes" : "BLOCKED"));
+  document.getElementById("pullDone").onclick();
+
+  // Too poor for ten: refused outright, nothing taken, no reveal.
+  G.state.coins = Game.setCost(0) * 10 - 1;
+  G.renderShop();
+  var poorRow = document.getElementById("machines").children[0];
+  var poorTen = tenBtn(poorRow);
+  var poorCoins = G.state.coins;
+  poorTen.onclick({ currentTarget: poorTen });
+  __flush();
+  out.push("one coin short: coins unchanged " + (G.state.coins === poorCoins) +
+           ", no reveal " +
+           (document.getElementById("pullBack").className.indexOf("show") < 0));
+
+  out.push("no beat threw across every batch: " + (__warns.length === 0) +
+           (__warns.length ? "  first: " + __warns[0] : ""));
 
   out.join("\n");
 }

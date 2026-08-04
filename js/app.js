@@ -154,16 +154,30 @@
       var price = Game.setCost(i);
       var prog = Game.setProgress(state, set);
       var afford = state.coins >= price;
+      var tenPrice = price * Game.BATCH;
+      var affordTen = state.coins >= tenPrice;
+
+      // Two buttons, stacked: one pull, or ten. The ten is plainly priced at
+      // ten times the one — there is no bulk discount to go hunting for.
+      var buys = document.createElement("div");
+      buys.className = "buy-stack";
+      buys.appendChild(button(price.toLocaleString(), afford ? "" : "grey", !afford, function (e) {
+        // The row's badge is where the capsule flies from.
+        var row = e.currentTarget.closest(".cell");
+        doPull(set, i, row && row.querySelector(".machine-art"));
+      }));
+      buys.appendChild(button("×10 · " + tenPrice.toLocaleString(),
+        affordTen ? "ten" : "grey", !affordTen, function (e) {
+          var row = e.currentTarget.closest(".cell");
+          doPullMany(set, i, row && row.querySelector(".machine-art"));
+        }));
+
       mbox.appendChild(cell(
         machinePreview(set),
         "<b>" + esc(set.name) + "</b><small>" + esc(set.blurb) + " · " +
           prog.have + " of " + prog.of +
           (prog.complete ? " — complete" : "") + "</small>",
-        button(price.toLocaleString(), afford ? "" : "grey", !afford, function (e) {
-          // The row's badge is where the capsule flies from.
-          var row = e.currentTarget.closest(".cell");
-          doPull(set, i, row && row.querySelector(".machine-art"));
-        })
+        buys
       ));
     });
 
@@ -513,35 +527,252 @@
     });
   }
 
-  function showResult(set, index, r) {
+  //  Ten at once. The machine dispenses the whole batch into a grid, they all
+  //  crack together, and then the screen whites out — the white is what turns
+  //  ten small reveals into one big one, and it covers the jump to the
+  //  card-by-card walkthrough that follows.
+  function doPullMany(set, index, fromEl) {
+    if (pulling) return;
+    var r = Game.buyPullMany(state, set, index, Game.BATCH, Math.random);
+    if (!r.ok) { Sfx.play("nope"); return; }
+    pulling = true;
+    lastPull = { set: set, index: index };
+    store();
+    renderCoins();
+    playCapsuleBatch(set, r.results, fromEl, function () {
+      pulling = false;
+      startReveal(set, index, r.results);
+    });
+  }
+
+  var TEN = {
+    hide:   0,
+    rise:   220,
+    turn:   640,
+    drop:   1240,   // the first capsule; the rest follow every dropStep
+    dropStep: 120,
+    climbIn:  170,  // how long after its own drop each one sets off
+    open:   3050,   // the first shell gives; the rest follow every openStep
+    openStep: 105,
+    white:  4380,
+    finish: 5080,
+  };
+
+  //  Where the ten land: five across, two down, sized from the viewport so
+  //  they fit a narrow phone rather than assuming a width.
+  function batchLayout(n) {
+    var cols = 5, rows = Math.ceil(n / cols);
+    var pad = 14;
+    var cellW = Math.min(74, (window.innerWidth - pad * 2) / cols);
+    var scale = Math.max(0.55, (cellW * 0.88) / 62);
+    var gridW = cellW * cols;
+    var left0 = (window.innerWidth - gridW) / 2 + cellW / 2;
+    var cellH = cellW * 1.12;
+    var top0 = window.innerHeight * 0.42 - ((rows - 1) * cellH) / 2;
+    var pos = [];
+    for (var i = 0; i < n; i++) {
+      pos.push({
+        x: left0 + (i % cols) * cellW,
+        y: top0 + Math.floor(i / cols) * cellH,
+      });
+    }
+    return { pos: pos, scale: scale };
+  }
+
+  function playCapsuleBatch(set, results, fromEl, done) {
+    clearSequence();
+    var stage = $("capsuleStage");
+    stage.innerHTML = "";
+    stage.classList.add("show");
+
+    var screen = $("screen" + cap(tab));
+    if (screen) screen.classList.add("busy");
+    at(TEN.hide + 60, function () { stage.classList.add("dim"); });
+
+    var machine = document.createElement("div");
+    machine.className = "machine";
+    machine.style.setProperty("--hi", set.hex);
+    machine.style.setProperty("--lo", set.lo);
+    machine.innerHTML =
+      '<div class="dome"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>' +
+      '<div class="body"><div class="dial"></div><div class="chute"></div></div>';
+    stage.appendChild(machine);
+
+    var layout = batchLayout(results.length);
+    var capsules = results.map(function (r) {
+      var c = document.createElement("div");
+      c.className = "capsule";
+      c.style.setProperty("--hi", set.hex);
+      c.style.setProperty("--lo", set.lo);
+      c.style.setProperty("--glow", Game.RARITY[r.card.rarity].tint);
+      c.style.setProperty("--s", layout.scale);
+      c.innerHTML =
+        '<img class="cap-prize" src="assets/' + r.card.file + '" alt="">' +
+        '<div class="cap-half top"></div><div class="cap-half bot"></div>' +
+        '<div class="cap-seam"></div>';
+      stage.appendChild(c);
+      return c;
+    });
+
+    // The whole batch is one riser, running from the first capsule leaving the
+    // chute to the first shell giving.
+    var riserHandle = null;
+
+    at(TEN.rise, function () { machine.classList.add("up"); });
+    at(TEN.turn, function () { machine.classList.add("turn"); Sfx.play("crank"); });
+
+    capsules.forEach(function (c, i) {
+      var dropAt = TEN.drop + i * TEN.dropStep;
+      at(dropAt, function () {
+        if (i === 0) {
+          machine.classList.add("rattle");
+          riserHandle = Sfx.riser((TEN.open - TEN.drop) / 1000);
+        }
+        Sfx.play("drop");
+        // Measured, not assumed — the machine has just animated into place.
+        var ch = machine.querySelector(".chute").getBoundingClientRect();
+        c.style.left = (ch.left + ch.width / 2) + "px";
+        c.style.top = (ch.top + ch.height / 2) + "px";
+        c.classList.add("out");
+      });
+      at(dropAt + TEN.climbIn, function () {
+        c.style.left = layout.pos[i].x + "px";
+        c.style.top = layout.pos[i].y + "px";
+        c.classList.add("spread");
+      });
+    });
+
+    at(TEN.drop + results.length * TEN.dropStep, function () {
+      machine.classList.remove("rattle");
+    });
+
+    // The best card in the batch is what the fanfare is for. Ten separate
+    // reveal stings would be mush, and would spend the legendary sound on a
+    // batch that only contained commons.
+    var best = results.reduce(function (b, r) {
+      return Game.RARITY_ORDER.indexOf(r.card.rarity) >
+             Game.RARITY_ORDER.indexOf(b) ? r.card.rarity : b;
+    }, "common");
+
+    capsules.forEach(function (c, i) {
+      at(TEN.open + i * TEN.openStep, function () {
+        c.classList.add("open");
+        if (i === 0) {
+          if (riserHandle) riserHandle.stop();
+          Sfx.play("crack");
+          machine.classList.add("away");
+        }
+        if (i === capsules.length - 1) {
+          Sfx.play("reveal", best);
+          if (best === "legendary") {
+            setTimeout(function () { Sfx.play("tritone"); }, 420);
+          }
+        }
+      });
+    });
+
+    at(TEN.white, function () {
+      var w = document.createElement("div");
+      w.className = "whiteout";
+      stage.appendChild(w);
+      // Forced to the next frame — appending and adding the class together
+      // gives the browser no starting value to animate from.
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { w.classList.add("on"); });
+      });
+      Sfx.play("swoosh");
+    });
+
+    pullTimers.push(setTimeout(function () {
+      if (pulling) { clearSequence(); done(); }
+    }, TEN.finish + 3000));
+
+    at(TEN.finish, function () {
+      stage.classList.remove("show", "dim");
+      stage.innerHTML = "";
+      if (screen) screen.classList.remove("busy");
+      done();
+    });
+  }
+
+  // ── the reveal ─────────────────────────────────────────────────────────
+  //  One card at a time, whether there is one of them or ten. A single path,
+  //  so a batch cannot drift out of step with a single pull.
+  var reveal = null;
+
+  function showResult(set, index, r) { startReveal(set, index, [r]); }
+
+  function startReveal(set, index, results) {
+    reveal = { set: set, index: index, results: results, i: 0 };
+    showReveal();
+  }
+
+  function showReveal() {
+    if (!reveal) return;
+    var q = reveal;
+    var r = q.results[q.i];
+    var single = q.results.length === 1;
+    var last = q.i === q.results.length - 1;
 
     var rarity = Game.RARITY[r.card.rarity];
     $("pullTier").textContent = rarity.label;
     $("pullTier").style.color = rarity.tint;
-    $("pullSet").textContent = set.name;
+    $("pullSet").textContent = q.set.name;
     $("pullImg").src = "assets/" + r.card.file;
     $("pullDupe").textContent = r.duplicate
       ? "You already had this one — that makes " + r.count + "."
       : "New!";
     $("pullModal").className = "modal " + r.card.rarity;
 
-    var again = $("pullAgain");
-    var price = Game.setCost(index);
-    again.textContent = "Again · " + price;
-    again.disabled = state.coins < price;
+    // Only shown for a batch. "1 of 1" on a single pull would be noise.
+    $("pullCount").textContent = single ? "" : (q.i + 1) + " of " + q.results.length;
+
+    var done = $("pullDone"), again = $("pullAgain");
+    if (single) {
+      var price = Game.setCost(q.index);
+      done.textContent = "Done";
+      done.style.display = "";
+      again.style.display = "";
+      again.textContent = "Again · " + price;
+      again.disabled = state.coins < price;
+    } else {
+      // Walking the batch: one button that moves forward, and on the last card
+      // it becomes the way out. Offering "Again" mid-batch would abandon the
+      // cards you have not looked at yet.
+      again.style.display = last ? "none" : "";
+      again.textContent = "Next";
+      again.disabled = false;
+      done.style.display = last ? "" : "none";
+      done.textContent = "Done";
+    }
 
     Sfx.play("swoosh");
     $("pullBack").classList.add("show");
   }
 
-  $("pullDone").onclick = function () {
-    Sfx.play("tock");
+  function closeReveal() {
+    reveal = null;
     $("pullBack").classList.remove("show");
     if (tab === "shop") renderShop();
     if (tab === "bag") renderBag();
+  }
+
+  $("pullDone").onclick = function () {
+    Sfx.play("tock");
+    closeReveal();
   };
   $("pullAgain").onclick = function () {
+    // Mid-batch this is "Next"; on a single pull it buys another.
+    if (reveal && reveal.results.length > 1) {
+      if (reveal.i < reveal.results.length - 1) {
+        reveal.i++;
+        Sfx.play("tock");
+        showReveal();
+      }
+      return;
+    }
     if (!lastPull) return;
+    reveal = null;
     $("pullBack").classList.remove("show");
     doPull(lastPull.set, lastPull.index, null);
   };

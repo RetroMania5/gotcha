@@ -485,5 +485,68 @@ ok('but armed with one held is kept',
    Game.load('{"items":{"extraMoney":1},"armed":{"extraMoney":true}}').armed.extraMoney === true);
 
 out.push('');
+
+out.push('');
+out.push('── ten at a time ──');
+var ten = Game.fresh();
+ten.coins = 250;                       // exactly ten pulls of the first set
+var batch = Game.buyPullMany(ten, set, 0, 10, function () { return 0.5; });
+ok('ten pulls go through', batch.ok === true);
+ok('and there are ten of them', batch.results.length === 10, batch.results.length + '');
+ok('charged ten times the single price', batch.cost === Game.setCost(0) * 10, batch.cost + '');
+ok('which takes every coin', ten.coins === 0, ten.coins + '');
+ok('the pull counter moves by ten', ten.pulls === 10, ten.pulls + '');
+ok('and ten cards land in the collection',
+   Object.keys(ten.owned).reduce(function (t, k) { return t + ten.owned[k]; }, 0) === 10);
+
+// One short of the price must not half-charge and stop partway.
+var poor = Game.fresh();
+poor.coins = Game.setCost(0) * 10 - 1;
+var no = Game.buyPullMany(poor, set, 0, 10, function () { return 0.5; });
+ok('one coin short is refused outright', no.ok === false && no.reason === 'coins');
+ok('with nothing taken', poor.coins === Game.setCost(0) * 10 - 1);
+ok('and no cards handed over', Object.keys(poor.owned).length === 0);
+
+// The whole point of running them in sequence: the same card twice inside one
+// batch must read "New!" and then "that makes 2", not two News.
+var dup = Game.fresh();
+dup.coins = 1000;
+var same = Game.buyPullMany(dup, set, 0, 10, function () { return 0; });  // always the first card
+ok('ten of the same card still gives ten results', same.results.length === 10);
+ok('only the first is new',
+   same.results.filter(function (r) { return !r.duplicate; }).length === 1);
+ok('and the counts climb one at a time',
+   same.results.map(function (r) { return r.count; }).join(',') === '1,2,3,4,5,6,7,8,9,10',
+   same.results.map(function (r) { return r.count; }).join(','));
+
+// A batch is capped at ten however it is called, so a stray number cannot
+// drain the wallet.
+var cap = Game.fresh();
+cap.coins = 100000;
+ok('asking for more than ten gives ten',
+   Game.buyPullMany(cap, set, 0, 999, function () { return 0.5; }).results.length === 10);
+ok('asking for zero still gives one',
+   Game.buyPullMany(cap, set, 0, 0, function () { return 0.5; }).results.length === 1);
+ok('the batch size is ten', Game.BATCH === 10);
+
+// The batch must obey the same odds as single pulls — a ten-pull that quietly
+// used a different table would be the easiest thing in the world to miss.
+ok('a batch draws from the same distribution as singles', (function () {
+  var seed = 13579;
+  function rng() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+  var s2 = Game.fresh();
+  s2.coins = 10000000;
+  var count = { common: 0, rare: 0, veryrare: 0, legendary: 0 }, n = 0;
+  for (var i = 0; i < 4000; i++) {
+    Game.buyPullMany(s2, set, 0, 10, rng).results.forEach(function (r) {
+      count[r.card.rarity]++; n++;
+    });
+  }
+  return ['common', 'rare', 'veryrare', 'legendary'].every(function (t) {
+    return Math.abs(count[t] / n - odds[t]) < 0.012;
+  });
+})(), '40,000 cards drawn in batches');
+
+
 out.push('═══  ' + pass + ' passed, ' + fail + ' failed  ═══');
 out.join('\n');
