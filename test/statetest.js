@@ -96,6 +96,14 @@ ok('and get rarer in the right order',
 ok('a legendary is genuinely rare but not hopeless',
    odds.legendary > 0.005 && odds.legendary < 0.04,
    (odds.legendary * 100).toFixed(2) + '%');
+// The guard above is deliberately loose, so pin the intended rate too — a
+// stray weight change would otherwise sail through it.
+ok('a legendary lands about once in fifty pulls',
+   Math.abs(1 / odds.legendary - 50) < 3, 'one in ' + (1 / odds.legendary).toFixed(0));
+// Raising it must not disturb the tiers below, only dilute them slightly.
+ok('very rare is still comfortably ahead of legendary',
+   odds.veryrare > odds.legendary * 1.8,
+   (odds.veryrare / odds.legendary).toFixed(1) + '× as likely');
 
 // A pull tested against Math.random proves nothing, so the generator is
 // injected and driven deliberately.

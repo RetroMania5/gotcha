@@ -45,7 +45,10 @@ var Game = (function () {
     common:    { weight: 100, label: "Common",    tint: "#8e8e93" },
     rare:      { weight: 70,  label: "Rare",      tint: "#3478f6" },
     veryrare:  { weight: 55,  label: "Very rare", tint: "#e0352b" },
-    legendary: { weight: 18,  label: "Legendary", tint: "#e8a317" },
+    // Raised from 18 (1.40%) to 26 (2.01%) — roughly one legendary every 50
+    // pulls instead of every 71. Only this weight moves; the other tiers are
+    // diluted in proportion, which keeps their relative shape intact.
+    legendary: { weight: 26,  label: "Legendary", tint: "#e8a317" },
   };
 
   var RARITY_ORDER = ["common", "rare", "veryrare", "legendary"];
