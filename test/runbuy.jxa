@@ -43,8 +43,9 @@ var byId={};
  "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
 byId.dBest.parent = El();
 // The game needs a canvas; a stub context is enough since nothing is drawn.
-byId.game.getContext = function(){ return new Proxy({}, { get: function(){ 
+byId.game.getContext = function(){ return new Proxy({}, { get: function(){
   return function(){ return { addColorStop:function(){} }; }; } }); };
+byId.game.clientWidth = 400; byId.game.clientHeight = 600;
 
 var document = {
   getElementById:function(id){return byId[id]||null;},
@@ -53,6 +54,9 @@ var document = {
 };
 var window={innerWidth:400,innerHeight:700,addEventListener:function(){}};
 var localStorage={getItem:function(){return null;},setItem:function(){}};
+// The service worker registration checks for these; there is none here.
+var navigator={serviceWorker:undefined};
+var location={protocol:"file:",hostname:"localhost",href:"file:///"};
 // A real timer queue, so the pull sequence actually runs to completion —
 // with a no-op setTimeout the flag never cleared and the test could not tell
 // a genuine deadlock from an artefact of the stub.
@@ -222,15 +226,55 @@ if (err) { err; } else {
   ownedBtn.onclick();
   out.push("tapped again: armed = " + Game.isArmed(G.state, ownedId));
 
-  // Starting a run spends it, once.
+  // Starting a run spends it, once. Note this is startRun (an actual flap),
+  // not again() — again() only PREPARES a run now. Reading the effects at the
+  // "Again" button was the bug that made items apply a round late.
   ownedBtn.onclick();
-  G.again();
+  G.startRun();
   out.push("after starting: held " + (G.state.items[ownedId] || 0) +
            ", armed " + Game.isArmed(G.state, ownedId) +
            ((G.state.items[ownedId] || 0) === heldBefore - 1 ? "  (spent once)" : "  (WRONG)"));
-  G.again();
+  G.again(); G.startRun();
   out.push("a second run without re-arming: held " + (G.state.items[ownedId] || 0) +
            ((G.state.items[ownedId] || 0) === heldBefore - 1 ? "  (not taken again)" : "  (TAKEN TWICE)"));
+
+  // ── items take effect on the run you arm them for ──────────────────
+  // They used to apply a round late: effects were only read when the "Again"
+  // button was pressed, so arming before the first run of a session did
+  // nothing at all. That is exactly what it looked like from the outside —
+  // "the items aren't working".
+  out.push("");
+  G.state.items = { extraLife: 2, easyPipe: 1 };
+  G.state.armed = {};
+  G.show("play");
+
+  var bar = document.getElementById("itemBar");
+  var lifeBtn = null, pipeBtn = null;
+  Game.ITEMS.forEach(function (it, i) {
+    if (it.id === "extraLife") lifeBtn = bar.children[i];
+    if (it.id === "easyPipe")  pipeBtn = bar.children[i];
+  });
+
+  lifeBtn.onclick();
+  out.push("armed Extra Life: " + Game.isArmed(G.state, "extraLife"));
+  // The run must already be carrying it, without any death in between.
+  out.push("game has a life ready before flying: " + G.game_lives_probe());
+
+  pipeBtn.onclick();
+  out.push("armed Easy Pipe too; gap now " + G.game_gap_probe() +
+           (G.game_gap_probe() === Game.EASY_GAP ? "  (applied immediately)" : "  (NOT APPLIED)"));
+
+  // Nothing spent until the run actually begins.
+  out.push("still held before flying: life " + G.state.items.extraLife +
+           ", pipe " + G.state.items.easyPipe);
+
+  G.startRun();
+  out.push("after starting: life " + (G.state.items.extraLife || 0) +
+           ", pipe " + (G.state.items.easyPipe || 0) +
+           ((G.state.items.extraLife === 1 && !G.state.items.easyPipe)
+            ? "  (each spent once)" : "  (WRONG)"));
+  out.push("and disarmed: " + (!Game.isArmed(G.state, "extraLife") &&
+                               !Game.isArmed(G.state, "easyPipe")));
 
   out.join("\n");
 }

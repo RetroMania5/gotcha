@@ -73,7 +73,11 @@
         if (!r.ok) { Sfx.play("nope"); return; }
         Sfx.play(r.armed ? "flick" : "tock");
         store();
-        renderItemBar();
+        // Rebuilt straight away, so arming Easy Pipe visibly widens the gaps
+        // before you fly rather than on some later round. Only while waiting
+        // — mid-run the rules must not change under you.
+        if (game && game.state === "ready") prepareRun();
+        else renderItemBar();
       };
       bar.appendChild(b);
     });
@@ -717,6 +721,7 @@
         Sfx.play("lock");
         Sfx.play("ding");
       },
+      onStart: payForRun,
       onFlap: function () {
         Sfx.play("flap");
         $("ovReady").style.display = "none";
@@ -750,21 +755,43 @@
 
   var runEffects = { gap: 0, lives: 0, shield: 3, money: 1 };
 
-  function again() {
-    runStart = state.coins;
-    // Read and spent here, once, so a run's rules cannot change midway and
-    // an item cannot be used twice.
+  //  Preparing a run and paying for it are two different things, and
+  //  conflating them was the bug: effects were only read when the "Again"
+  //  button was pressed, so an item armed before the FIRST run of a session —
+  //  or armed while sitting on the ready screen — did nothing until the round
+  //  after. It looked like the item was broken.
+  //
+  //  Now the pipes are rebuilt to match whatever is armed the moment you arm
+  //  it, so a wider gap is visible before you start, and the item itself is
+  //  not spent until the run actually begins.
+  function prepareRun() {
+    if (!game) return;
     runEffects = Game.activeEffects(state);
-    var used = Game.consumeArmed(state);
-    if (used.length) { store(); Sfx.play("unlock"); }
     game.setEffects(runEffects);
     game.reset();
     $("itemBar").style.display = "";
     renderItemBar();
-    renderCoins();
     $("hud").textContent = "0";
     $("ovDead").style.display = "none";
     $("ovReady").style.display = "";
+  }
+
+  //  Called by the game the instant a run starts, which is the only moment
+  //  that is unambiguously "you are now using these".
+  function payForRun() {
+    runStart = state.coins;
+    var used = Game.consumeArmed(state);
+    if (used.length) {
+      store();
+      Sfx.play("unlock");
+      renderItemBar();
+      renderCoins();
+    }
+  }
+
+  function again() {
+    prepareRun();
+    renderCoins();
   }
 
   $("btnAgain").onclick = function () { Sfx.play("unlock"); again(); };
@@ -834,6 +861,7 @@
   sets = (window.GOTCHA_SETS || []).slice();
   startGame();
   runStart = state.coins;
+  prepareRun();
   show("play");
   if (!sets.length) $("navTitle").textContent = "Play (no sets)";
 
@@ -842,6 +870,11 @@
     get state() { return state; },
     get sets() { return sets; },
     show: show, renderShop: renderShop, renderBag: renderBag,
-    renderItemBar: renderItemBar, again: again,
+    renderItemBar: renderItemBar, again: again, prepareRun: prepareRun,
+    // Test probes: the run's actual state, so a test can tell whether an item
+    // reached the game rather than only whether the model thinks it did.
+    game_lives_probe: function () { return game ? game.lives : -1; },
+    game_gap_probe: function () { return runEffects.gap; },
+    startRun: function () { if (game) game.flap(); },
   };
 })();

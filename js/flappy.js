@@ -79,7 +79,13 @@ var Flappy = (function () {
 
     function flap() {
       if (state === "dead") return;
-      if (state === "ready") { state = "playing"; last = 0; }
+      if (state === "ready") {
+        state = "playing";
+        last = 0;
+        // The run has begun. Anything that has to be spent is spent here —
+        // this is the only moment that is unambiguously "started".
+        if (hooks.onStart) hooks.onStart();
+      }
       bird.v = FLAP;
       if (hooks.onFlap) hooks.onFlap();
     }
