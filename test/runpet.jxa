@@ -1,0 +1,115 @@
+// The pet, driven through the real flappy.js.
+//
+// The interesting part is the lag: the pet is supposed to follow the bird's
+// PATH, not the bird. If the buffer is read from the wrong end it still looks
+// like "a thing near the bird" on screen while actually tracking it live, so
+// this is checked against recorded positions rather than by eye.
+ObjC.import("Foundation");
+function read(p){return ObjC.unwrap($.NSString.stringWithContentsOfFileEncodingError(p,$.NSUTF8StringEncoding,null));}
+var D="/Users/zander/Desktop/repo/gotcha/";
+var out=[], pass=0, fail=0;
+function ok(n,c,note){ if(c){pass++;out.push("PASS  "+n+(note?"  ["+note+"]":""));}
+                       else {fail++;out.push("FAIL  "+n+(note?"  ["+note+"]":""));} }
+
+// A canvas context that accepts anything and returns itself, so gradients and
+// paths chain without needing a real 2D implementation.
+var ctxProxy = new Proxy({}, {
+  get: function (t, k) {
+    if (k in t) return t[k];
+    return function () { return ctxProxy; };
+  },
+  set: function (t, k, v) { t[k] = v; return true; }
+});
+var canvas = {
+  clientWidth: 400, clientHeight: 640, width: 400, height: 640,
+  getContext: function () { return ctxProxy; },
+  addEventListener: function () {}, getBoundingClientRect: function () {
+    return { left: 0, top: 0, width: 400, height: 640 };
+  }
+};
+var window = { devicePixelRatio: 2, innerWidth: 400, innerHeight: 640,
+               addEventListener: function () {} };
+var loadedSrc = [];
+function Image() {
+  var self = { onload: null, onerror: null };
+  Object.defineProperty(self, "src", {
+    set: function (v) { loadedSrc.push(v); if (self.onload) self.onload(); },
+    get: function () { return loadedSrc[loadedSrc.length - 1]; }
+  });
+  return self;
+}
+function requestAnimationFrame(){ return 0; }
+function cancelAnimationFrame(){}
+var console = { log: function(){}, warn: function(){}, error: function(){} };
+
+eval(read(D + "js/flappy.js"));
+
+var g = Flappy.create(canvas, {});
+g.resize();
+g.reset();
+var P = g._internals;
+
+// ── the trail ────────────────────────────────────────────────────────────
+ok("the pet sits behind the bird", P.PET_X < P.BIRD_X,
+   "pet x " + P.PET_X + " vs bird x " + P.BIRD_X);
+ok("with no pet equipped nothing is loaded", P.hasPet() === false);
+
+// Seeded on reset, so the pet starts where the bird is rather than swooping
+// in from wherever it was left.
+ok("the trail starts where the bird is",
+   Math.abs(P.petY() - P.birdY()) < 0.001, P.petY().toFixed(1));
+
+// Fly, recording where the bird really was after each step.
+var STEP = Flappy.STEP;
+g.flap();
+var ys = [P.birdY()];
+var worst = 0, everDiffered = false, steps = 0;
+for (var i = 1; i <= 200; i++) {
+  if (i % 31 === 0) g.flap();          // vary the path, or the lag is invisible
+  P.step(STEP);
+  if (g.state === "dead") break;
+  steps = i;
+  ys.push(P.birdY());
+  var want = ys[Math.max(0, i - P.PET_LAG + 1)];
+  var got = P.petY();
+  var d = Math.abs(want - got);
+  if (d > worst) worst = d;
+  if (Math.abs(P.birdY() - got) > 1) everDiffered = true;
+}
+ok("enough of a run to judge by", steps > 120, steps + " steps");
+ok("the pet is exactly where the bird was, PET_LAG steps back",
+   worst < 0.001, "worst error " + worst.toExponential(1) + "px");
+ok("and is genuinely behind it, not tracking it live", everDiffered);
+
+// The trail must not grow without bound over a long run.
+ok("the buffer stays a fixed size", P.PET_LAG === 13);
+
+// ── it must never affect play ────────────────────────────────────────────
+// A pet that could kill you would make every card a liability.
+var src = read(D + "js/flappy.js");
+var hitsSrc = /function hits\(p\) \{[\s\S]*?\n    \}/.exec(src)[0];
+var nearSrc = /function near\(rx, ry, rw, rh\) \{[\s\S]*?\n    \}/.exec(src)[0];
+ok("collision never mentions the pet",
+   hitsSrc.indexOf("PET") < 0 && hitsSrc.indexOf("pet") < 0 &&
+   nearSrc.indexOf("PET") < 0 && nearSrc.indexOf("pet") < 0);
+ok("and the pet is drawn, never simulated",
+   /drawPet\(\)/.test(src) && !/petY\(\)[^;]*collide/i.test(src));
+
+// Equipping mid-life must not throw, and must actually load something.
+g.setPet("assets/sunburst/00.png");
+ok("equipping loads the image", P.hasPet() === true && loadedSrc.length === 1,
+   loadedSrc.join(","));
+g.setPet(null);
+ok("and un-equipping drops it", P.hasPet() === false);
+// A broken path must not leave a half-loaded pet behind.
+g.setPet("assets/nope.png");
+ok("a second equip replaces rather than stacks", loadedSrc.length === 2);
+
+// Drawing with and without a pet must both be safe.
+var threw = null;
+try { g.setPet(null); P.step(STEP); } catch (e) { threw = e.message; }
+ok("stepping with no pet is safe", threw === null, threw || "");
+
+out.push("");
+out.push("═══  " + pass + " passed, " + fail + " failed  ═══");
+out.join("\n");

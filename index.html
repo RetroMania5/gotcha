@@ -17,8 +17,8 @@
 <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
 <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-<link rel="stylesheet" href="css/ios.css?v=ee2372dbf9">
-<link rel="stylesheet" href="css/app.css?v=ee2372dbf9">
+<link rel="stylesheet" href="css/ios.css?v=6903449872">
+<link rel="stylesheet" href="css/app.css?v=6903449872">
 </head>
 <body class="linen">
 
@@ -64,6 +64,8 @@
       <!-- The three items, before you start. Tap to arm. -->
       <!-- The hint is static; the row of buttons is built by renderItemBar(). -->
       <div class="item-wrap" id="itemWrap">
+        <!-- Which card is tagging along. Tap to change it. -->
+        <button class="pet-slot" id="petSlot" type="button"></button>
         <div class="item-hint">One per round</div>
         <div class="item-bar" id="itemBar"></div>
       </div>
@@ -123,6 +125,19 @@
 <div class="capsule-stage" id="capsuleStage"></div>
 
 <!-- ── the pull result ────────────────────────────────────────────────── -->
+<!-- Choosing a pet. Only cards you own, plus the option of none. -->
+<div class="modal-back" id="petBack">
+  <div class="modal" id="petModal">
+    <h2>Choose a pet</h2>
+    <p>It follows you while you fly. Just for company — it changes nothing.</p>
+    <div class="pet-grid" id="petGrid"></div>
+    <div class="row" style="margin-top:14px;gap:8px">
+      <button class="btn grey" id="petNone" style="flex:1">No pet</button>
+      <button class="btn" id="petClose" style="flex:1">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- The ×10 summary: everything you got, on one screen. -->
 <div class="modal-back" id="batchBack">
   <div class="modal" id="batchModal">
@@ -149,10 +164,10 @@
   </div>
 </div>
 
-<script src="assets/manifest.js?v=ee2372dbf9"></script>
-<script src="js/sfx.js?v=ee2372dbf9"></script>
-<script src="js/state.js?v=ee2372dbf9"></script>
-<script src="js/flappy.js?v=ee2372dbf9"></script>
-<script src="js/app.js?v=ee2372dbf9"></script>
+<script src="assets/manifest.js?v=6903449872"></script>
+<script src="js/sfx.js?v=6903449872"></script>
+<script src="js/state.js?v=6903449872"></script>
+<script src="js/flappy.js?v=6903449872"></script>
+<script src="js/app.js?v=6903449872"></script>
 </body>
 </html>

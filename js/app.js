@@ -12,7 +12,7 @@
   //  Stamped by tools/stamp.py from the source itself. Declared here, not
   //  beside the update check that uses it, so it is assigned before anything
   //  can render with it.
-  var BUILD = "ee2372dbf9";
+  var BUILD = "6903449872";
 
   var state = Game.fresh();
   var sets = [];
@@ -93,6 +93,75 @@
       };
       bar.appendChild(b);
     });
+  }
+
+  // ── the pet ────────────────────────────────────────────────────────────
+  //  Chosen from the play screen rather than the collection, because tapping a
+  //  card in the collection already means "sell a spare" — overloading that
+  //  tap would make one of the two a mistake waiting to happen.
+  //  Returns the set as well, because a card has no name of its own — it is
+  //  identified by which machine it came out of and how rare it is.
+  function findCard(id) {
+    for (var i = 0; i < sets.length; i++) {
+      for (var j = 0; j < sets[i].cards.length; j++) {
+        if (sets[i].cards[j].id === id) return { card: sets[i].cards[j], set: sets[i] };
+      }
+    }
+    return null;
+  }
+
+  function renderPetSlot() {
+    var slot = $("petSlot");
+    if (!slot) return;
+    var id = Game.petId(state);
+    var found = id ? findCard(id) : null;
+    slot.className = "pet-slot" + (found ? " has " + found.card.rarity : "");
+    slot.innerHTML = found
+      ? '<img src="assets/' + found.card.file + '" alt="">' +
+        '<span>' + esc(found.set.name) + ' · ' +
+        esc(Game.RARITY[found.card.rarity].label) + '</span>'
+      : '<span class="pet-empty">Choose a pet</span>';
+    slot.title = found ? "Tap to change your pet" : "Tap to pick a pet";
+  }
+
+  function applyPet() {
+    if (!game) return;
+    var id = Game.petId(state);
+    var found = id ? findCard(id) : null;
+    game.setPet(found ? "assets/" + found.card.file : null);
+  }
+
+  function openPetPicker() {
+    var grid = $("petGrid");
+    grid.innerHTML = "";
+    var current = Game.petId(state);
+    var any = false;
+
+    sets.forEach(function (set) {
+      set.cards.forEach(function (card) {
+        if (!Game.ownedCount(state, card.id)) return;   // only what you own
+        any = true;
+        var d = document.createElement("div");
+        d.className = "card " + card.rarity + (current === card.id ? " chosen" : "");
+        d.innerHTML = '<img src="assets/' + card.file + '" alt="">';
+        d.onclick = function () {
+          var r = Game.equipPet(state, card.id);
+          if (!r.ok) { Sfx.play("nope"); return; }
+          Sfx.play(r.pet ? "flick" : "tock");
+          store();
+          applyPet();
+          renderPetSlot();
+          openPetPicker();      // redrawn so the tick moves
+        };
+        grid.appendChild(d);
+      });
+    });
+
+    if (!any) {
+      grid.innerHTML = '<p class="pet-none">Nothing to bring along yet — ' +
+                       'pull a card from the shop first.</p>';
+    }
+    $("petBack").classList.add("show");
   }
 
   function renderCoins() {
@@ -771,6 +840,23 @@
     if (tab === "bag") renderBag();
   }
 
+  $("petSlot").onclick = function () {
+    Sfx.play("tock");
+    openPetPicker();
+  };
+  $("petNone").onclick = function () {
+    Game.equipPet(state, null);
+    Sfx.play("tock");
+    store();
+    applyPet();
+    renderPetSlot();
+    openPetPicker();
+  };
+  $("petClose").onclick = function () {
+    Sfx.play("tock");
+    $("petBack").classList.remove("show");
+  };
+
   $("pullDone").onclick = function () {
     Sfx.play("tock");
     closeReveal();
@@ -1016,8 +1102,12 @@
     runEffects = Game.activeEffects(state);
     game.setEffects(runEffects);
     game.reset();
+    // Re-applied every run: the pet may have been changed between them, and
+    // reset() clears the trail the pet follows.
+    applyPet();
     $("itemWrap").style.display = "";
     renderItemBar();
+    renderPetSlot();
     $("hud").textContent = "0";
     $("ovDead").style.display = "none";
     $("ovReady").style.display = "";
@@ -1187,6 +1277,9 @@
     get sets() { return sets; },
     show: show, renderShop: renderShop, renderBag: renderBag,
     renderItemBar: renderItemBar, again: again, prepareRun: prepareRun,
+    renderPetSlot: renderPetSlot, openPetPicker: openPetPicker, applyPet: applyPet,
+    // What the GAME is actually carrying, not what the save says.
+    game_pet_probe: function () { return game ? game._internals.petSrc() : null; },
     // Test probes: the run's actual state, so a test can tell whether an item
     // reached the game rather than only whether the model thinks it did.
     game_lives_probe: function () { return game ? game.lives : -1; },

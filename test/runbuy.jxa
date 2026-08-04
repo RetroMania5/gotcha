@@ -54,7 +54,8 @@ var byId={};
  "tabPlay","tabShop","tabBag","upgradeCell","machines","oddsCell","bagTotals","bagBar",
  "bagSets","game","hud","ovReady","ovDead","dPipes","dEarned","dBest","btnAgain",
  "btnToShop","pullBack","pullModal","pullTier","pullSet","pullImg","pullDupe",
- "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar","itemWrap","batchBack","batchModal","batchTitle","batchSet","batchGrid","batchNew","batchDone"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
+ "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar","itemWrap","batchBack","batchModal","batchTitle","batchSet","batchGrid","batchNew","batchDone",
+ "petSlot","petBack","petModal","petGrid","petNone","petClose"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
 byId.dBest.parent = El();
 // The game needs a canvas; a stub context is enough since nothing is drawn.
 byId.game.getContext = function(){ return new Proxy({}, { get: function(){
@@ -88,6 +89,11 @@ function __flush(){
 }
 function setInterval(){return 0;} function clearInterval(){}
 function requestAnimationFrame(){return 0;} function cancelAnimationFrame(){}
+// The pet loads its picture through one of these.
+function Image(){ var im={onload:null,onerror:null,_src:null};
+  Object.defineProperty(im,"src",{ get:function(){return im._src;},
+    set:function(v){ im._src=v; if(im.onload) im.onload(); } });
+  return im; }
 var __warns=[];
 var console={log:function(){},
   warn:function(){ __warns.push(Array.prototype.slice.call(arguments).join(" ")); },
@@ -451,6 +457,70 @@ if (err) { err; } else {
 
   out.push("no beat threw across every batch: " + (__warns.length === 0) +
            (__warns.length ? "  first: " + __warns[0] : ""));
+
+
+  // ── the pet ──────────────────────────────────────────────────────────
+  out.push("");
+  G.show("play");
+  G.state.owned = {};
+  G.renderPetSlot();
+  out.push("with nothing owned the slot invites you: " +
+           (G.state.pet === null) + ", label ok: " +
+           (document.getElementById("petSlot").className.indexOf("has") < 0));
+
+  G.openPetPicker();
+  // Counting CARD tiles, not children — the "nothing yet" message is a child
+  // too, and counting those made this pass for the wrong reason.
+  function petTiles() {
+    var kids = document.getElementById("petGrid").children, n = 0;
+    for (var i = 0; i < kids.length; i++) {
+      if (kids[i].className.indexOf("card") >= 0) n++;
+    }
+    return n;
+  }
+  out.push("picker with an empty collection: " +
+           (petTiles() === 0 ? "no tiles, just the message" : "TILES WITH NOTHING OWNED"));
+
+  // Own a few, then pick one.
+  var someCards = [];
+  G.sets[0].cards.forEach(function (c, i) { if (i < 4) { G.state.owned[c.id] = 1; someCards.push(c); } });
+  G.openPetPicker();
+  var tiles = document.getElementById("petGrid").children;
+  out.push("picker lists only what you own: " + petTiles() +
+           (petTiles() === 4 ? "  (four)" : "  (WRONG)"));
+
+  tiles[1].onclick();
+  out.push("tapping one equips it: " + (Game.petId(G.state) === someCards[1].id));
+  out.push("  the slot shows it: " +
+           (document.getElementById("petSlot").className.indexOf("has") >= 0));
+  var chosen = 0;
+  var t2 = document.getElementById("petGrid").children;
+  for (var pi = 0; pi < t2.length; pi++) {
+    if (t2[pi].className.indexOf("chosen") >= 0) chosen++;
+  }
+  out.push("  exactly one is ticked: " + (chosen === 1));
+
+  // Tapping the same one again takes it off.
+  t2[1].onclick();
+  out.push("tapping it again removes it: " + (Game.petId(G.state) === null));
+
+  // The No pet button, and that the choice reaches the game.
+  t2[2].onclick();
+  out.push("picked another: " + (Game.petId(G.state) === someCards[2].id));
+  G.prepareRun();
+  out.push("  and the run carries it: " + (G.game_pet_probe() || "NONE"));
+  document.getElementById("petNone").onclick();
+  out.push("No pet clears it: " + (Game.petId(G.state) === null));
+  G.prepareRun();
+  out.push("  and the run carries none: " + (G.game_pet_probe() === null));
+  document.getElementById("petClose").onclick();
+
+  // It has to survive a save round trip through the real app.
+  G.openPetPicker();
+  document.getElementById("petGrid").children[0].onclick();
+  var savedPet = Game.petId(G.state);
+  var reloaded = Game.load(Game.save(G.state));
+  out.push("survives save and load: " + (Game.petId(reloaded) === savedPet));
 
   out.join("\n");
 }

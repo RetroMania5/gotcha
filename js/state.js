@@ -76,6 +76,8 @@ var Game = (function () {
     if (!card) return { ok: false, reason: "unknown" };
     var have = state.owned[card.id] || 0;
     if (have < 2) return { ok: false, reason: "last", have: have };
+    // Only duplicates can be sold, so the last copy never goes this way and an
+    // equipped pet cannot be sold out from under itself.
     var coins = sellValue(card.rarity);
     state.owned[card.id] = have - 1;
     state.coins += coins;
@@ -260,6 +262,7 @@ var Game = (function () {
       owned: {},        // card id -> how many
       items: {},        // item id -> how many held
       armed: {},        // item id -> armed for the next run
+      pet: null,        // card id of the pet that follows you, or null
     };
   }
 
@@ -291,6 +294,9 @@ var Game = (function () {
         if (n > 0) s.items[id] = n;
       });
     }
+    // Only if it is still a card you own — an equipped pet you do not have
+    // would draw nothing and read as a bug.
+    if (d.pet && s.owned[d.pet]) s.pet = d.pet;
     if (d.armed && typeof d.armed === "object") {
       ITEM_IDS.forEach(function (id) {
         // Armed only counts if one is actually held; the two can drift if a
@@ -372,6 +378,29 @@ var Game = (function () {
     return { ok: true, n: results.length, cost: spent, results: results };
   }
 
+  // ── the pet ────────────────────────────────────────────────────────────
+  //  One of your cards, tagging along for the run. Purely for show — it has
+  //  no effect on the game, so equipping one is never a decision you can get
+  //  wrong.
+  //
+  //  Only something you own can be equipped, and a card must stay owned to
+  //  stay equipped. Selling your last copy of your pet un-equips it rather
+  //  than leaving a ghost following you around.
+  function equipPet(state, id) {
+    if (id === null || id === undefined) { state.pet = null; return { ok: true, pet: null }; }
+    if (!state.owned[id]) return { ok: false, reason: "unowned" };
+    if (state.pet === id) { state.pet = null; return { ok: true, pet: null }; }
+    state.pet = id;
+    return { ok: true, pet: id };
+  }
+
+  function petId(state) {
+    // Checked on the way out as well as on the way in, so a save edited by
+    // hand cannot equip something you do not have.
+    if (state.pet && state.owned[state.pet]) return state.pet;
+    return null;
+  }
+
   // ── the collection ─────────────────────────────────────────────────────
   function ownedCount(state, id) { return state.owned[id] || 0; }
 
@@ -412,6 +441,7 @@ var Game = (function () {
     fresh: fresh, load: load, save: save,
     scorePipe: scorePipe, endRun: endRun, buyUpgrade: buyUpgrade, buyPull: buyPull,
     buyPullMany: buyPullMany, BATCH: BATCH,
+    equipPet: equipPet, petId: petId,
     ownedCount: ownedCount, setProgress: setProgress, totals: totals,
   };
 })();

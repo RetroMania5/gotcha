@@ -48,6 +48,49 @@ var Flappy = (function () {
       shieldFor = e.shield > 0 ? e.shield : 3;
     }
 
+    // ── the pet ──────────────────────────────────────────────────────────
+    //  A card that tags along behind the bird. It follows the PATH rather than
+    //  the bird itself: every simulation step pushes the bird's height into a
+    //  ring buffer, and the pet reads out of the far end. That is what makes
+    //  it swing through the same arcs a moment later instead of gliding
+    //  straight to wherever the bird happens to be.
+    //
+    //  Decorative only. It is never tested against a pipe — a pet that could
+    //  kill you would make every card a liability rather than a reward.
+    var PET_LAG = 13;          // steps behind, at a 1/120s step
+    var PET_X = BIRD_X - 34;
+    var PET_R = 11;
+    var petImg = null, petReady = false;
+    var trail = [], trailAt = 0;
+
+    function setPet(src) {
+      if (!src) { petImg = null; petReady = false; return; }
+      // A new Image each time, so swapping pets cannot show the old one
+      // while the new one loads.
+      var im = new Image();
+      petReady = false;
+      im.onload = function () { if (petImg === im) petReady = true; };
+      im.onerror = function () { if (petImg === im) { petImg = null; petReady = false; } };
+      petImg = im;
+      im.src = src;
+    }
+
+    function resetTrail() {
+      trail = [];
+      trailAt = 0;
+      for (var i = 0; i < PET_LAG; i++) trail.push(bird.y);
+    }
+
+    function pushTrail() {
+      trail[trailAt] = bird.y;
+      trailAt = (trailAt + 1) % PET_LAG;
+    }
+
+    //  The oldest entry — where the bird was PET_LAG steps ago.
+    function petY() {
+      return trail.length ? trail[trailAt] : bird.y;
+    }
+
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = canvas.clientWidth;
@@ -62,6 +105,7 @@ var Flappy = (function () {
       pipes = [];
       scored = 0;
       t = 0; acc = 0; shake = 0; shieldUntil = 0;
+      resetTrail();
       // Far enough ahead that the first one is not immediately in your face.
       for (var i = 0; i < 4; i++) addPipe(W + 140 + i * SPACING);
       state = "ready";
@@ -141,16 +185,23 @@ var Flappy = (function () {
         addPipe(pipes[pipes.length - 1].x + SPACING);
       }
 
+      var grounded = false;
       if (bird.y + BIRD_R >= H - GROUND) {
         bird.y = H - GROUND - BIRD_R;
-        // The ground always kills. A shield that let you skid along the floor
-        // would remove the only hard boundary in the game.
-        die();
-        return;
+        grounded = true;
       }
       // The ceiling stops you rather than killing you — dying to an invisible
       // line above the screen feels arbitrary.
       if (bird.y - BIRD_R < 0) { bird.y = BIRD_R; bird.v = 0; }
+
+      // AFTER the clamps, so the pet follows the path the bird actually took.
+      // Recorded before them, it traced a line through the ceiling that the
+      // bird never flew.
+      pushTrail();
+
+      // The ground always kills. A shield that let you skid along the floor
+      // would remove the only hard boundary in the game.
+      if (grounded) { die(); return; }
 
       if (!shielded()) {
         for (var j = 0; j < pipes.length; j++) {
@@ -202,6 +253,7 @@ var Flappy = (function () {
 
       pipes.forEach(drawPipe);
       drawGround();
+      drawPet();
       drawBird();
       ctx.restore();
     }
@@ -264,6 +316,31 @@ var Flappy = (function () {
       for (var x = -off; x < W; x += 26) ctx.fillRect(x, y + 9, 13, GROUND - 9);
       ctx.fillStyle = "rgba(0,0,0,.25)";
       ctx.fillRect(0, y, W, 2);
+    }
+
+    //  The pet. Bobs on top of the trail so it reads as alive rather than as a
+    //  sticker dragged along, and tilts gently with its own rate of climb.
+    function drawPet() {
+      if (!petImg || !petReady) return;
+      var y = petY();
+      var bob = Math.sin(t * 6) * 2.2;
+      // Its own tilt, from how the trail is moving rather than from the bird's
+      // current velocity — the bird may already be doing something else.
+      var ahead = trail[(trailAt + 1) % PET_LAG];
+      var tilt = Math.max(-0.4, Math.min(0.5, (ahead - y) / 26));
+
+      ctx.save();
+      ctx.translate(PET_X, y + bob);
+      ctx.rotate(tilt);
+      // A soft shadow under it, so it sits in the scene rather than on top.
+      ctx.globalAlpha = 0.18;
+      ctx.beginPath();
+      ctx.ellipse(0, PET_R + 3, PET_R * 0.8, PET_R * 0.3, 0, 0, 7);
+      ctx.fillStyle = "#000";
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.drawImage(petImg, -PET_R, -PET_R, PET_R * 2, PET_R * 2);
+      ctx.restore();
     }
 
     function drawBird() {
@@ -348,12 +425,16 @@ var Flappy = (function () {
 
     return {
       start: start, stop: stop, reset: reset, flap: flap, resize: resize,
-      setEffects: setEffects,
+      setEffects: setEffects, setPet: setPet,
       get state() { return state; },
       get score() { return scored; },
       get lives() { return lives; },
       get shielded() { return shielded(); },
-      _internals: { hits: hits, step: step, takeHit: takeHit },
+      _internals: { hits: hits, step: step, takeHit: takeHit,
+                    petY: petY, hasPet: function () { return !!petImg; },
+                    birdY: function () { return bird.y; },
+                    petSrc: function () { return petImg ? petImg.src : null; },
+                    PET_LAG: PET_LAG, PET_X: PET_X, BIRD_X: BIRD_X },
     };
   }
 

@@ -705,3 +705,52 @@
 .batch-grid .card.fresh { box-shadow: 0 0 0 1.5px #47b356, 0 1px 3px rgba(0,0,0,.3); }
 #batchModal h2 { margin-bottom: 0; }
 #batchNew { font-size: 12px; color: #555; }
+
+/* ── the pet ───────────────────────────────────────────────────────────── */
+/* A slim slot above the items, on the pre-run screen only. Tapping it opens
+   the picker; it hides with the rest of the bar once you are flying. */
+.pet-slot {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 10px 4px;
+  padding: 4px 8px;
+  border-radius: 9px;
+  border: 1.5px solid rgba(0,0,0,.3);
+  background: linear-gradient(to bottom, rgba(255,255,255,.9), rgba(226,226,226,.86));
+  box-shadow: 0 1px 0 rgba(255,255,255,.7) inset, 0 2px 4px rgba(0,0,0,.28);
+  font: inherit; cursor: pointer;
+  min-height: 30px;
+}
+.pet-slot img { width: 22px; height: 22px; object-fit: contain; }
+.pet-slot span { font-size: 10.5px; font-weight: 700; color: #444; }
+.pet-slot .pet-empty { color: #8e8e93; font-weight: 600; }
+.pet-slot:active { transform: scale(.98); }
+/* Tinted by the pet's rarity, matching every other place rarity is shown. */
+.pet-slot.has.rare      { border-color: #3478f6; }
+.pet-slot.has.veryrare  { border-color: #e0352b; }
+.pet-slot.has.legendary { border-color: #e8a317; box-shadow: 0 0 8px rgba(232,163,23,.5); }
+
+.pet-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  margin-top: 10px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.pet-grid .card { padding: 3px; border-radius: 6px; cursor: pointer; }
+.pet-grid .card:active { transform: scale(.94); }
+/* The one currently following you. */
+.pet-grid .card.chosen {
+  box-shadow: 0 0 0 2px #2b8a34, 0 0 9px rgba(43,138,52,.55);
+}
+.pet-grid .card.chosen::after {
+  content: "✓";
+  position: absolute; right: 2px; top: 0;
+  font-size: 10px; font-weight: 800; color: #2b8a34;
+}
+.pet-grid .card { position: relative; }
+.pet-none { font-size: 12px; color: #777; margin: 12px 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-slot:active, .pet-grid .card:active { transform: none; }
+}

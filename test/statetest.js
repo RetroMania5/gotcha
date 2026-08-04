@@ -548,5 +548,57 @@ ok('a batch draws from the same distribution as singles', (function () {
 })(), '40,000 cards drawn in batches');
 
 
+
+out.push('');
+out.push('── the pet ──');
+var pet = Game.fresh();
+ok('you start with no pet', Game.petId(pet) === null);
+ok('you cannot equip what you do not own',
+   Game.equipPet(pet, 't_L').ok === false && Game.petId(pet) === null);
+
+pet.owned['t_L'] = 1;
+pet.owned['t_C0'] = 3;
+ok('one you own equips', Game.equipPet(pet, 't_L').ok === true);
+ok('and it is reported', Game.petId(pet) === 't_L');
+ok('equipping another swaps rather than stacking',
+   Game.equipPet(pet, 't_C0').pet === 't_C0' && Game.petId(pet) === 't_C0');
+ok('tapping the equipped one takes it off',
+   Game.equipPet(pet, 't_C0').pet === null && Game.petId(pet) === null);
+Game.equipPet(pet, 't_L');
+ok('null un-equips too',
+   Game.equipPet(pet, null).ok === true && Game.petId(pet) === null);
+
+// A pet must not survive losing the card. Only duplicates can be sold, so the
+// real risk is a save that has drifted.
+Game.equipPet(pet, 't_L');
+delete pet.owned['t_L'];
+ok('a pet you no longer own is not reported', Game.petId(pet) === null);
+
+// It has to survive a save/load round trip.
+var petSave = Game.fresh();
+petSave.owned['t_C0'] = 2;
+Game.equipPet(petSave, 't_C0');
+var back = Game.load(Game.save(petSave));
+ok('the pet survives saving and loading', Game.petId(back) === 't_C0');
+
+// And a hand-edited save must not equip something unowned.
+var bogus = Game.load(JSON.stringify({
+  coins: 0, upgrades: 0, owned: { t_C0: 1 }, items: {}, armed: {}, pet: 't_L',
+}));
+ok('a save claiming an unowned pet loads without one', Game.petId(bogus) === null);
+var okSave = Game.load(JSON.stringify({
+  coins: 0, upgrades: 0, owned: { t_L: 1 }, items: {}, armed: {}, pet: 't_L',
+}));
+ok('but a legitimate one loads fine', Game.petId(okSave) === 't_L');
+
+// Selling spares must never strip the pet — sellAllSpares leaves one of each.
+var keep = Game.fresh();
+keep.owned['t_L'] = 4;
+Game.equipPet(keep, 't_L');
+Game.sellAllSpares(keep, [set]);
+ok('selling every spare keeps the pet', Game.petId(keep) === 't_L',
+   'copies left: ' + keep.owned['t_L']);
+
+
 out.push('═══  ' + pass + ' passed, ' + fail + ' failed  ═══');
 out.join('\n');
