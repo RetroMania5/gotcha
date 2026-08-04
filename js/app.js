@@ -51,23 +51,31 @@
 
   //  The three items, shown before a run starts. Dimmed when you hold none;
   //  tap to arm, tap again to disarm. Nothing is spent until you fly.
+  //
+  //  One per round. Tapping a second swaps to it, and the others visibly go
+  //  quiet while something is armed so the rule is legible without reading the
+  //  label — otherwise the swap just looks like the first button broke.
   function renderItemBar() {
     var bar = $("itemBar");
     if (!bar) return;
     bar.innerHTML = "";
+    var on = Game.armedItem(state);
     Game.ITEMS.forEach(function (it) {
       var n = Game.itemCount(state, it.id);
-      var armed = Game.isArmed(state, it.id);
+      var armed = on === it.id;
       var b = document.createElement("button");
       b.type = "button";
-      b.className = "item-btn" + (n ? "" : " empty") + (armed ? " armed" : "");
+      b.className = "item-btn" + (n ? "" : " empty") + (armed ? " armed" : "") +
+                    (on && !armed && n ? " benched" : "");
       b.style.setProperty("--tint", it.tint);
       b.innerHTML =
         '<span class="ib-icon">' + it.icon + '</span>' +
         '<span class="ib-name">' + esc(it.name) + '</span>' +
         '<span class="ib-n">' + n + '</span>';
-      b.title = n ? it.blurb + (armed ? " — on" : " — tap to use")
-                  : it.name + " — none held";
+      b.title = !n ? it.name + " — none held"
+              : armed ? it.blurb + " — on, tap to turn off"
+              : on ? it.blurb + " — tap to use this instead"
+              : it.blurb + " — tap to use";
       b.onclick = function () {
         var r = Game.toggleItem(state, it.id);
         if (!r.ok) { Sfx.play("nope"); return; }
@@ -727,7 +735,7 @@
         $("ovReady").style.display = "none";
         // A pre-run choice, so it goes once the run is under way — three
         // buttons over the pipes would just be in the way.
-        $("itemBar").style.display = "none";
+        $("itemWrap").style.display = "none";
       },
     });
     game.start();
@@ -769,7 +777,7 @@
     runEffects = Game.activeEffects(state);
     game.setEffects(runEffects);
     game.reset();
-    $("itemBar").style.display = "";
+    $("itemWrap").style.display = "";
     renderItemBar();
     $("hud").textContent = "0";
     $("ovDead").style.display = "none";

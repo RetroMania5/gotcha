@@ -62,7 +62,11 @@
       <div class="hud" id="hud">0</div>
 
       <!-- The three items, before you start. Tap to arm. -->
-      <div class="item-bar" id="itemBar"></div>
+      <!-- The hint is static; the row of buttons is built by renderItemBar(). -->
+      <div class="item-wrap" id="itemWrap">
+        <div class="item-hint">One per round</div>
+        <div class="item-bar" id="itemBar"></div>
+      </div>
     </div>
   </div>
 

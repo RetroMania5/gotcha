@@ -578,11 +578,25 @@
 .slot.won .reels { box-shadow: 0 0 16px rgba(255,213,79,.85) inset, 0 2px 5px rgba(0,0,0,.4) inset; }
 
 /* ── the item bar before a run ───────────────────────────────────────────*/
+.item-wrap {
+  position: absolute; left: 0; right: 0; bottom: 12px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+  z-index: 3;
+}
+/* Says the rule out loud. A button that silently swaps instead of adding is
+   only obvious once you already know. */
+.item-hint {
+  text-align: center;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .4px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.92);
+  text-shadow: 0 1px 2px rgba(0,0,0,.75);
+}
+/* Positioning now lives on .item-wrap, which holds this row and the hint
+   above it. Leaving the absolute placement here too would tear the two apart. */
 .item-bar {
-  position: absolute; left: 0; right: 0; bottom: 10px;
   display: flex; gap: 7px;
   padding: 0 10px;
-  z-index: 3;
 }
 .item-btn {
   flex: 1;
@@ -613,11 +627,15 @@
   box-shadow: 0 0 11px var(--tint), 0 1px 0 rgba(255,255,255,.8) inset;
 }
 .item-btn.armed .ib-name { color: #222; }
+/* Something else is armed: this one is still tappable (it would swap), but it
+   steps back so the armed one is unmistakably the single active choice. */
+.item-btn.benched { opacity: .62; }
+.item-btn.benched .ib-icon { filter: saturate(.5); }
 .item-btn:active:not(.empty) { transform: scale(.95); }
 
 /* Hidden once you are flying — it is a pre-run choice, and three buttons over
    the pipes would just be in the way. */
-.playing .item-bar, .dead .item-bar { display: none; }
+.playing .item-wrap, .dead .item-wrap { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .slot, .reel.stopped, .slot-name { animation: none; transition: none; }

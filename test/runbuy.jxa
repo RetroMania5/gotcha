@@ -40,7 +40,7 @@ var byId={};
  "tabPlay","tabShop","tabBag","upgradeCell","machines","oddsCell","bagTotals","bagBar",
  "bagSets","game","hud","ovReady","ovDead","dPipes","dEarned","dBest","btnAgain",
  "btnToShop","pullBack","pullModal","pullTier","pullSet","pullImg","pullDupe",
- "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
+ "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar","itemWrap"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
 byId.dBest.parent = El();
 // The game needs a canvas; a stub context is enough since nothing is drawn.
 byId.game.getContext = function(){ return new Proxy({}, { get: function(){
@@ -260,21 +260,53 @@ if (err) { err; } else {
   // The run must already be carrying it, without any death in between.
   out.push("game has a life ready before flying: " + G.game_lives_probe());
 
+  // One per round: arming Easy Pipe SWAPS to it rather than stacking.
   pipeBtn.onclick();
-  out.push("armed Easy Pipe too; gap now " + G.game_gap_probe() +
-           (G.game_gap_probe() === Game.EASY_GAP ? "  (applied immediately)" : "  (NOT APPLIED)"));
+  out.push("then armed Easy Pipe -> armed item is " + Game.armedItem(G.state) +
+           (Game.armedItem(G.state) === "easyPipe" ? "  (swapped)" : "  (WRONG)"));
+  out.push("  Extra Life stood down: " + !Game.isArmed(G.state, "extraLife"));
+  out.push("  its effect is gone too: lives " + G.game_lives_probe() +
+           (G.game_lives_probe() === 0 ? "  (no stacking)" : "  (STILL STACKED)"));
+  out.push("  Easy Pipe applied: gap " + G.game_gap_probe() +
+           (G.game_gap_probe() === Game.EASY_GAP ? "  (immediately)" : "  (NOT APPLIED)"));
 
-  // Nothing spent until the run actually begins.
-  out.push("still held before flying: life " + G.state.items.extraLife +
+  // The swap itself costs nothing — arming is still free and reversible.
+  out.push("nothing spent by swapping: life " + G.state.items.extraLife +
            ", pipe " + G.state.items.easyPipe);
 
   G.startRun();
   out.push("after starting: life " + (G.state.items.extraLife || 0) +
            ", pipe " + (G.state.items.easyPipe || 0) +
-           ((G.state.items.extraLife === 1 && !G.state.items.easyPipe)
-            ? "  (each spent once)" : "  (WRONG)"));
-  out.push("and disarmed: " + (!Game.isArmed(G.state, "extraLife") &&
-                               !Game.isArmed(G.state, "easyPipe")));
+           ((G.state.items.extraLife === 2 && G.state.items.easyPipe === 0)
+            ? "  (only the armed one spent)" : "  (WRONG)"));
+  out.push("and nothing left armed: " + (Game.armedItem(G.state) === null));
+
+  // The UI has to show the rule, not just enforce it. Stock all three first,
+  // or the untouched ones render as "empty" and the benched styling is never
+  // actually exercised.
+  G.state.items.easyPipe = 2; G.state.items.extraLife = 2; G.state.items.extraMoney = 2;
+  G.renderItemBar();
+  lifeBtn.onclick();
+  var cls = [];
+  Game.ITEMS.forEach(function (it, i) {
+    cls.push(it.id + "=" + (bar.children[i].className.replace("item-btn", "").trim() || "plain"));
+  });
+  out.push("buttons while one is armed: " + cls.join(", "));
+  out.push("  exactly one armed, two benched: " +
+           (cls.filter(function (c) { return /=armed$/.test(c); }).length === 1 &&
+            cls.filter(function (c) { return /benched/.test(c); }).length === 2));
+
+  // A save from before the rule (or a hand-edited one) must not load stacked.
+  var stacked = Game.load(JSON.stringify({
+    coins: 0, upgrades: 0, owned: {}, items: { easyPipe: 5, extraLife: 5, extraMoney: 5 },
+    armed: { easyPipe: true, extraLife: true, extraMoney: true },
+  }));
+  var n = Game.ITEM_IDS.filter(function (id) { return Game.isArmed(stacked, id); }).length;
+  out.push("old save with three armed loads as " + n + " armed" +
+           (n === 1 ? "  (clamped)" : "  (WRONG)"));
+  var fx = Game.activeEffects(stacked);
+  out.push("  and grants one effect: gap=" + fx.gap + " lives=" + fx.lives + " money=" + fx.money +
+           (((fx.gap ? 1 : 0) + fx.lives + (fx.money > 1 ? 1 : 0)) === 1 ? "  (single)" : "  (STACKED)"));
 
   out.join("\n");
 }

@@ -354,6 +354,62 @@ ok('still nothing spent', Game.itemCount(arm, 'easyPipe') === 2);
 ok('an unknown item cannot be armed', Game.toggleItem(arm, 'nonsense').ok === false);
 
 out.push('');
+out.push('── one per round ──');
+var solo = Game.fresh();
+solo.items = { easyPipe: 3, extraLife: 3, extraMoney: 3 };
+ok('nothing armed to begin with', Game.armedItem(solo) === null);
+Game.toggleItem(solo, 'easyPipe');
+ok('arming one reports it', Game.armedItem(solo) === 'easyPipe');
+// A second tap SWAPS. Refusing would read as a broken button, and there is
+// only one thing the tap could have meant.
+var swap = Game.toggleItem(solo, 'extraLife');
+ok('arming a second swaps to it', swap.armed === true && Game.armedItem(solo) === 'extraLife');
+ok('and says what it displaced', swap.replaced === 'easyPipe', swap.replaced + '');
+ok('the first is no longer armed', !Game.isArmed(solo, 'easyPipe'));
+ok('exactly one is armed, whatever the order',
+   Game.ITEM_IDS.filter(function (id) { return Game.isArmed(solo, id); }).length === 1);
+// Swapping is free — the whole point of arming being separate from spending.
+ok('swapping spends nothing',
+   Game.itemCount(solo, 'easyPipe') === 3 && Game.itemCount(solo, 'extraLife') === 3);
+Game.toggleItem(solo, 'extraLife');
+ok('and it can still be turned off entirely', Game.armedItem(solo) === null);
+
+// Arming all three in turn must never leave two on, in any order.
+var orders = [
+  ['easyPipe', 'extraLife', 'extraMoney'],
+  ['extraMoney', 'easyPipe', 'extraLife'],
+  ['extraLife', 'extraMoney', 'easyPipe'],
+];
+var everStacked = false;
+orders.forEach(function (order) {
+  var s = Game.fresh();
+  s.items = { easyPipe: 1, extraLife: 1, extraMoney: 1 };
+  order.forEach(function (id) {
+    Game.toggleItem(s, id);
+    if (Game.ITEM_IDS.filter(function (o) { return Game.isArmed(s, o); }).length > 1) {
+      everStacked = true;
+    }
+  });
+  var e = Game.activeEffects(s);
+  // The effects must be single too, not just the armed flags.
+  if ((e.gap ? 1 : 0) + e.lives + (e.money > 1 ? 1 : 0) !== 1) everStacked = true;
+});
+ok('no arming order can ever stack two', !everStacked);
+
+// A save written before this rule, or edited by hand, must load clamped.
+var legacy = Game.load(JSON.stringify({
+  coins: 0, upgrades: 0, owned: {},
+  items: { easyPipe: 1, extraLife: 1, extraMoney: 1 },
+  armed: { easyPipe: true, extraLife: true, extraMoney: true },
+}));
+ok('an old save with three armed loads as one',
+   Game.ITEM_IDS.filter(function (id) { return Game.isArmed(legacy, id); }).length === 1);
+var le = Game.activeEffects(legacy);
+ok('and grants a single effect',
+   (le.gap ? 1 : 0) + le.lives + (le.money > 1 ? 1 : 0) === 1);
+ok('spending it takes exactly one item', Game.consumeArmed(legacy).length === 1);
+
+out.push('');
 out.push('── what they do ──');
 var eff = Game.fresh();
 var none = Game.activeEffects(eff);
@@ -361,15 +417,18 @@ ok('with nothing armed the gap is left alone', none.gap === 0);
 ok('there are no extra lives', none.lives === 0);
 ok('and money is unmultiplied', none.money === 1);
 
+// One per round, so each is checked on its own rather than all at once.
 eff.items = { easyPipe: 1, extraLife: 1, extraMoney: 1 };
-Game.toggleItem(eff, 'easyPipe');
-Game.toggleItem(eff, 'extraLife');
-Game.toggleItem(eff, 'extraMoney');
-var all = Game.activeEffects(eff);
+function only(id) {
+  Game.ITEM_IDS.forEach(function (o) { eff.armed[o] = false; });
+  Game.toggleItem(eff, id);
+  return Game.activeEffects(eff);
+}
+var all = only('easyPipe');
 ok('Easy Pipe widens the gap', all.gap === Game.EASY_GAP && all.gap > 132, all.gap + '');
-ok('Extra Life grants one hit', all.lives === 1);
-ok('with three seconds of shield', all.shield === 3);
-ok('and Extra Money doubles it', all.money === 2);
+ok('Extra Life grants one hit', only('extraLife').lives === 1);
+ok('with three seconds of shield', only('extraLife').shield === 3);
+ok('and Extra Money doubles it', only('extraMoney').money === 2);
 ok('doubling really doubles the payout',
    Game.perPipe(0, 2) === Game.perPipe(0) * 2, Game.perPipe(0, 2) + '');
 ok('a multiplier of zero is ignored rather than paying nothing',
@@ -380,17 +439,18 @@ out.push('── spending them ──');
 var use = Game.fresh();
 use.items = { easyPipe: 2, extraMoney: 1 };
 Game.toggleItem(use, 'easyPipe');
-Game.toggleItem(use, 'extraMoney');
+Game.toggleItem(use, 'extraMoney');   // swaps rather than stacking
 var used = Game.consumeArmed(use);
-ok('starting a run spends what was armed', used.length === 2, used.join(','));
-ok('one of each is taken',
-   Game.itemCount(use, 'easyPipe') === 1 && Game.itemCount(use, 'extraMoney') === 0);
-// One use, so they disarm as they are spent — otherwise a second run would
+ok('starting a run spends what was armed', used.length === 1, used.join(','));
+ok('and only the one that was armed',
+   Game.itemCount(use, 'easyPipe') === 2 && Game.itemCount(use, 'extraMoney') === 0);
+// One use, so it disarms as it is spent — otherwise a second run would
 // silently take another.
 ok('and they disarm as they go',
    !Game.isArmed(use, 'easyPipe') && !Game.isArmed(use, 'extraMoney'));
 ok('an unarmed item is untouched', Game.consumeArmed(use).length === 0);
-ok('so the spare is still there', Game.itemCount(use, 'easyPipe') === 1);
+// easyPipe was swapped out before the run, so both are still held.
+ok('so the unarmed stock is still there', Game.itemCount(use, 'easyPipe') === 2);
 
 // Armed-but-not-held can only come from an edited save, and would otherwise
 // grant the effect for free forever.

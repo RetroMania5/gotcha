@@ -192,22 +192,40 @@ var Game = (function () {
   function isArmed(state, id) { return !!(state.armed && state.armed[id]); }
 
   //  Arming is free and reversible. Nothing is spent until a run begins.
+  //
+  //  One item per run. Tapping a second one SWAPS to it rather than being
+  //  refused — a refusal would just read as a broken button, and there is only
+  //  ever one thing you could have meant by the tap.
   function toggleItem(state, id) {
     if (!itemById(id)) return { ok: false, reason: "unknown" };
     if (isArmed(state, id)) { state.armed[id] = false; return { ok: true, armed: false }; }
     if (itemCount(state, id) < 1) return { ok: false, reason: "none" };
+    var replaced = armedItem(state);
+    ITEM_IDS.forEach(function (other) { state.armed[other] = false; });
     state.armed[id] = true;
-    return { ok: true, armed: true };
+    return { ok: true, armed: true, replaced: replaced };
   }
 
-  //  What the armed items do this run. Read once at the start, so a run's
-  //  rules cannot change halfway through it.
+  //  The single armed item, or null. The one place that decides what "armed"
+  //  means, so nothing has to trust that the armed map holds only one key.
+  function armedItem(state) {
+    for (var i = 0; i < ITEM_IDS.length; i++) {
+      if (isArmed(state, ITEM_IDS[i])) return ITEM_IDS[i];
+    }
+    return null;
+  }
+
+  //  What the armed item does this run. Read once at the start, so a run's
+  //  rules cannot change halfway through it. Derived from the single armed
+  //  item rather than from three independent lookups, so even a hand-edited
+  //  save cannot stack two effects.
   function activeEffects(state) {
+    var on = armedItem(state);
     return {
-      gap: isArmed(state, "easyPipe") ? EASY_GAP : 0,   // 0 means "leave it alone"
-      lives: isArmed(state, "extraLife") ? 1 : 0,
+      gap: on === "easyPipe" ? EASY_GAP : 0,   // 0 means "leave it alone"
+      lives: on === "extraLife" ? 1 : 0,
       shield: SHIELD_SECONDS,
-      money: isArmed(state, "extraMoney") ? MONEY_MULTIPLIER : 1,
+      money: on === "extraMoney" ? MONEY_MULTIPLIER : 1,
     };
   }
 
@@ -274,8 +292,9 @@ var Game = (function () {
       ITEM_IDS.forEach(function (id) {
         // Armed only counts if one is actually held; the two can drift if a
         // save is hand-edited, and an armed item you do not own would grant
-        // its effect for free.
-        if (d.armed[id] && s.items[id] > 0) s.armed[id] = true;
+        // its effect for free. One at a time, so a save written before that
+        // rule (or edited since) loads as the first one rather than as both.
+        if (d.armed[id] && s.items[id] > 0 && !armedItem(s)) s.armed[id] = true;
       });
     }
     return s;
@@ -354,7 +373,7 @@ var Game = (function () {
     EASY_GAP: EASY_GAP, SHIELD_SECONDS: SHIELD_SECONDS,
     MONEY_MULTIPLIER: MONEY_MULTIPLIER,
     itemById: itemById, spinItem: spinItem, itemCount: itemCount,
-    isArmed: isArmed, toggleItem: toggleItem,
+    isArmed: isArmed, armedItem: armedItem, toggleItem: toggleItem,
     activeEffects: activeEffects, consumeArmed: consumeArmed,
     sellValue: sellValue, sellDuplicate: sellDuplicate,
     spareValue: spareValue, sellAllSpares: sellAllSpares,
