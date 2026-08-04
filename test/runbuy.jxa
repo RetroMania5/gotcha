@@ -55,7 +55,8 @@ var byId={};
  "bagSets","game","hud","ovReady","ovDead","dPipes","dEarned","dBest","btnAgain",
  "btnToShop","pullBack","pullModal","pullTier","pullSet","pullImg","pullDupe",
  "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar","itemWrap","batchBack","batchModal","batchTitle","batchSet","batchGrid","batchNew","batchDone",
- "petSlot","petBack","petModal","petGrid","petNone","petClose"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
+ "petSlot","petBack","petModal","petGrid","petNone","petClose",
+ "setBtn","setBack","setModal","setClose","petOpacity","petOpacityNote"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
 byId.dBest.parent = El();
 // The game needs a canvas; a stub context is enough since nothing is drawn.
 byId.game.getContext = function(){ return new Proxy({}, { get: function(){
@@ -69,7 +70,14 @@ var document = {
 };
 var window={innerWidth:400,innerHeight:700,addEventListener:function(){}};
 
-var localStorage={getItem:function(){return null;},setItem:function(){}};
+// A real map, not a no-op — otherwise "it is remembered" cannot be tested,
+// only assumed.
+var __ls = {};
+var localStorage={
+  getItem:function(k){ return k in __ls ? __ls[k] : null; },
+  setItem:function(k,v){ __ls[k]=String(v); },
+  removeItem:function(k){ delete __ls[k]; }
+};
 // The service worker registration checks for these; there is none here.
 var navigator={serviceWorker:undefined};
 var location={protocol:"file:",hostname:"localhost",href:"file:///"};
@@ -521,6 +529,42 @@ if (err) { err; } else {
   var savedPet = Game.petId(G.state);
   var reloaded = Game.load(Game.save(G.state));
   out.push("survives save and load: " + (Game.petId(reloaded) === savedPet));
+
+
+  // ── settings ─────────────────────────────────────────────────────────
+  out.push("");
+  document.getElementById("setBtn").onclick();
+  out.push("the gear opens settings: " +
+           (document.getElementById("setBack").className.indexOf("show") >= 0));
+  out.push("sound lives inside it now: " +
+           (typeof document.getElementById("soundBtn").onclick === "function"));
+
+  var slider = document.getElementById("petOpacity");
+  var note = document.getElementById("petOpacityNote");
+  out.push("starts solid: " + slider.value + "  " + note.textContent);
+
+  slider.value = "50";
+  slider.oninput.call(slider);
+  out.push("dragged to 50: opacity " + G.petOpacity + ", note " + note.textContent);
+  out.push("  and the game got it: " + G.game_petAlpha_probe());
+
+  out.push("  and it was remembered: " + __ls["gotcha:petOpacity"]);
+
+  // Clamped, not trusted — this value comes from a slider AND from a save.
+  slider.value = "0";
+  slider.oninput.call(slider);
+  out.push("a zero is clamped to " + G.petOpacity +
+           (G.petOpacity >= 0.15 ? "  (still visible)" : "  (INVISIBLE)"));
+  slider.value = "999";
+  slider.oninput.call(slider);
+  out.push("and an absurd value to " + G.petOpacity);
+  slider.value = "nonsense";
+  slider.oninput.call(slider);
+  out.push("nonsense leaves it alone: " +
+           (G.petOpacity === 1 ? "held at 1" : "moved to " + G.petOpacity));
+  document.getElementById("setClose").onclick();
+  out.push("Done closes it: " +
+           (document.getElementById("setBack").className.indexOf("show") < 0));
 
   out.join("\n");
 }

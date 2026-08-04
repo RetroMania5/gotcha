@@ -17,8 +17,8 @@
 <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
 <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-<link rel="stylesheet" href="css/ios.css?v=6903449872">
-<link rel="stylesheet" href="css/app.css?v=6903449872">
+<link rel="stylesheet" href="css/ios.css?v=f4270c7e0e">
+<link rel="stylesheet" href="css/app.css?v=f4270c7e0e">
 </head>
 <body class="linen">
 
@@ -26,7 +26,7 @@
 
   <div class="navbar">
     <div class="left" id="navLeft">
-      <button class="btn small grey" id="soundBtn" title="Sound">🔊</button>
+      <button class="btn small grey" id="setBtn" title="Settings">⚙</button>
     </div>
     <div class="title" id="navTitle">Play</div>
     <div class="right">
@@ -125,6 +125,27 @@
 <div class="capsule-stage" id="capsuleStage"></div>
 
 <!-- ── the pull result ────────────────────────────────────────────────── -->
+<!-- Settings. Sound lives here now; the navbar has one button, not a row. -->
+<div class="modal-back" id="setBack">
+  <div class="modal" id="setModal">
+    <h2>Settings</h2>
+
+    <div class="set-row">
+      <div class="grow"><b>Sound</b><small>Every tap, pipe and capsule.</small></div>
+      <button class="btn small" id="soundBtn" title="Sound">🔊</button>
+    </div>
+
+    <div class="set-row col">
+      <div class="grow"><b>Pet fade</b><small id="petOpacityNote">Solid</small></div>
+      <input type="range" id="petOpacity" min="15" max="100" step="5" value="100">
+    </div>
+
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="setClose" style="flex:1">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- Choosing a pet. Only cards you own, plus the option of none. -->
 <div class="modal-back" id="petBack">
   <div class="modal" id="petModal">
@@ -164,10 +185,10 @@
   </div>
 </div>
 
-<script src="assets/manifest.js?v=6903449872"></script>
-<script src="js/sfx.js?v=6903449872"></script>
-<script src="js/state.js?v=6903449872"></script>
-<script src="js/flappy.js?v=6903449872"></script>
-<script src="js/app.js?v=6903449872"></script>
+<script src="assets/manifest.js?v=f4270c7e0e"></script>
+<script src="js/sfx.js?v=f4270c7e0e"></script>
+<script src="js/state.js?v=f4270c7e0e"></script>
+<script src="js/flappy.js?v=f4270c7e0e"></script>
+<script src="js/app.js?v=f4270c7e0e"></script>
 </body>
 </html>

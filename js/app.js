@@ -12,7 +12,7 @@
   //  Stamped by tools/stamp.py from the source itself. Declared here, not
   //  beside the update check that uses it, so it is assigned before anything
   //  can render with it.
-  var BUILD = "6903449872";
+  var BUILD = "f4270c7e0e";
 
   var state = Game.fresh();
   var sets = [];
@@ -124,11 +124,45 @@
     slot.title = found ? "Tap to change your pet" : "Tap to pick a pet";
   }
 
+  //  How solid the pet is drawn. A preference rather than game state, so it
+  //  lives beside the sound setting instead of in the save — it says nothing
+  //  about your collection.
+  var PET_OPACITY_KEY = "gotcha:petOpacity";
+  var petOpacity = 1;
+
+  function loadPetOpacity() {
+    try {
+      var raw = localStorage.getItem(PET_OPACITY_KEY);
+      if (raw === null) return;
+      var v = parseFloat(raw);
+      // Clamped rather than trusted: a bad value would make the pet invisible
+      // with no obvious way to get it back.
+      if (isFinite(v)) petOpacity = Math.max(0.15, Math.min(1, v));
+    } catch (e) {}
+  }
+
+  function savePetOpacity() {
+    try { localStorage.setItem(PET_OPACITY_KEY, String(petOpacity)); } catch (e) {}
+  }
+
   function applyPet() {
     if (!game) return;
     var id = Game.petId(state);
     var found = id ? findCard(id) : null;
     game.setPet(found ? "assets/" + found.card.file : null);
+    game.setPetOpacity(petOpacity);
+  }
+
+  function renderPetOpacity() {
+    var pct = Math.round(petOpacity * 100);
+    var slider = $("petOpacity");
+    if (slider) slider.value = String(pct);
+    var note = $("petOpacityNote");
+    if (note) {
+      note.textContent = pct >= 100 ? "Solid"
+                       : pct <= 25 ? pct + "% — barely there"
+                       : pct + "% — see-through";
+    }
   }
 
   function openPetPicker() {
@@ -1147,6 +1181,30 @@
   $("tabShop").onclick = function () { goTab("shop"); };
   $("tabBag").onclick = function () { goTab("bag"); };
 
+  // ── settings ───────────────────────────────────────────────────────────
+  //  One button in the navbar rather than a growing row of them.
+  $("setBtn").onclick = function () {
+    Sfx.play("tock");
+    renderPetOpacity();
+    $("setBack").classList.add("show");
+  };
+  $("setClose").onclick = function () {
+    Sfx.play("tock");
+    $("setBack").classList.remove("show");
+  };
+  $("petOpacity").oninput = function () {
+    var raw = parseFloat(this.value);
+    // `raw || 100` would be wrong twice over: a legitimate 0 is falsy and would
+    // jump to fully solid, and unreadable input would do the same rather than
+    // leaving the setting alone.
+    if (!isFinite(raw)) { renderPetOpacity(); return; }
+    petOpacity = Math.max(0.15, Math.min(1, raw / 100));
+    renderPetOpacity();
+    // Applied live, so you can see what you are choosing rather than guessing.
+    if (game) game.setPetOpacity(petOpacity);
+    savePetOpacity();
+  };
+
   //  A lot of this game makes noise, so it needs an off switch.
   $("soundBtn").onclick = function () {
     var on = !Sfx.isEnabled();
@@ -1257,6 +1315,7 @@
   });
 
   // ── start ──────────────────────────────────────────────────────────────
+  loadPetOpacity();
   recall();
   renderCoins();
   renderItemBar();
@@ -1278,8 +1337,11 @@
     show: show, renderShop: renderShop, renderBag: renderBag,
     renderItemBar: renderItemBar, again: again, prepareRun: prepareRun,
     renderPetSlot: renderPetSlot, openPetPicker: openPetPicker, applyPet: applyPet,
+    renderPetOpacity: renderPetOpacity,
+    get petOpacity() { return petOpacity; },
     // What the GAME is actually carrying, not what the save says.
     game_pet_probe: function () { return game ? game._internals.petSrc() : null; },
+    game_petAlpha_probe: function () { return game ? game._internals.petAlpha() : null; },
     // Test probes: the run's actual state, so a test can tell whether an item
     // reached the game rather than only whether the model thinks it did.
     game_lives_probe: function () { return game ? game.lives : -1; },

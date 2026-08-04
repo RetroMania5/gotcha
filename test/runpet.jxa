@@ -105,6 +105,24 @@ ok("and un-equipping drops it", P.hasPet() === false);
 g.setPet("assets/nope.png");
 ok("a second equip replaces rather than stacks", loadedSrc.length === 2);
 
+// ── opacity ──────────────────────────────────────────────────────────────
+g.setPet("assets/sunburst/00.png");
+ok("a pet starts solid", P.petAlpha() === 1, String(P.petAlpha()));
+g.setPetOpacity(0.4);
+ok("opacity is taken", P.petAlpha() === 0.4);
+// Clamped in the game too, not only in the interface — the interface is not
+// the only caller, and a save is not a slider.
+g.setPetOpacity(0);
+ok("zero is clamped to something visible", P.petAlpha() > 0, String(P.petAlpha()));
+g.setPetOpacity(5);
+ok("and above one is clamped down", P.petAlpha() === 1);
+g.setPetOpacity(NaN);
+ok("NaN does not blank the pet", isFinite(P.petAlpha()) && P.petAlpha() > 0,
+   String(P.petAlpha()));
+g.setPetOpacity("0.6");
+ok("a numeric string works", P.petAlpha() === 0.6);
+g.setPetOpacity(1);
+
 // Drawing with and without a pet must both be safe.
 var threw = null;
 try { g.setPet(null); P.step(STEP); } catch (e) { threw = e.message; }

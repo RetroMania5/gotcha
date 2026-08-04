@@ -61,6 +61,7 @@ var Flappy = (function () {
     var PET_X = BIRD_X - 34;
     var PET_R = 11;
     var petImg = null, petReady = false;
+    var petAlpha = 1;          // 0..1, how solid the pet is drawn
     var trail = [], trailAt = 0;
 
     function setPet(src) {
@@ -73,6 +74,14 @@ var Flappy = (function () {
       im.onerror = function () { if (petImg === im) { petImg = null; petReady = false; } };
       petImg = im;
       im.src = src;
+    }
+
+    //  Clamped here rather than trusted, because it comes from a slider and
+    //  from a save file, and a NaN would make the pet vanish with no way back.
+    function setPetOpacity(v) {
+      v = Number(v);
+      if (!isFinite(v)) v = 1;
+      petAlpha = Math.max(0.05, Math.min(1, v));
     }
 
     function resetTrail() {
@@ -333,12 +342,13 @@ var Flappy = (function () {
       ctx.translate(PET_X, y + bob);
       ctx.rotate(tilt);
       // A soft shadow under it, so it sits in the scene rather than on top.
-      ctx.globalAlpha = 0.18;
+      // It fades with the pet, or a ghostly pet keeps a solid shadow.
+      ctx.globalAlpha = 0.18 * petAlpha;
       ctx.beginPath();
       ctx.ellipse(0, PET_R + 3, PET_R * 0.8, PET_R * 0.3, 0, 0, 7);
       ctx.fillStyle = "#000";
       ctx.fill();
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = petAlpha;
       ctx.drawImage(petImg, -PET_R, -PET_R, PET_R * 2, PET_R * 2);
       ctx.restore();
     }
@@ -425,7 +435,7 @@ var Flappy = (function () {
 
     return {
       start: start, stop: stop, reset: reset, flap: flap, resize: resize,
-      setEffects: setEffects, setPet: setPet,
+      setEffects: setEffects, setPet: setPet, setPetOpacity: setPetOpacity,
       get state() { return state; },
       get score() { return scored; },
       get lives() { return lives; },
@@ -434,6 +444,7 @@ var Flappy = (function () {
                     petY: petY, hasPet: function () { return !!petImg; },
                     birdY: function () { return bird.y; },
                     petSrc: function () { return petImg ? petImg.src : null; },
+                    petAlpha: function () { return petAlpha; },
                     PET_LAG: PET_LAG, PET_X: PET_X, BIRD_X: BIRD_X },
     };
   }
