@@ -62,6 +62,7 @@ var Flappy = (function () {
     var PET_R = 11;
     var petImg = null, petReady = false;
     var petAlpha = 1;          // 0..1, how solid the pet is drawn
+    var gold = false;          // the completion skin
     var trail = [], trailAt = 0;
 
     function setPet(src) {
@@ -83,6 +84,10 @@ var Flappy = (function () {
       if (!isFinite(v)) v = 1;
       petAlpha = Math.max(0.05, Math.min(1, v));
     }
+
+    //  The reward for finishing the collection. Appearance only — it changes
+    //  no number anywhere, so wearing it is never a decision.
+    function setGold(on) { gold = !!on; }
 
     function resetTrail() {
       trail = [];
@@ -374,15 +379,27 @@ var Flappy = (function () {
       ctx.save();
       ctx.translate(BIRD_X, bird.y);
       ctx.rotate(bird.rot);
-      // Body
+      // Body. Gold gets a third stop and a warm rim, so it reads as metal
+      // rather than as the ordinary bird with the brightness turned up.
       var g = ctx.createLinearGradient(0, -BIRD_R, 0, BIRD_R);
-      g.addColorStop(0, "#ffe36e");
-      g.addColorStop(1, "#f0b429");
+      if (gold) {
+        g.addColorStop(0, "#fff6c9");
+        g.addColorStop(0.45, "#f5c542");
+        g.addColorStop(1, "#a9761a");
+        // A slow travelling sheen, so it catches the light as it flies.
+        ctx.shadowColor = "rgba(255,214,102,.9)";
+        ctx.shadowBlur = 9 + Math.sin(t * 3) * 4;
+      } else {
+        g.addColorStop(0, "#ffe36e");
+        g.addColorStop(1, "#f0b429");
+      }
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(0, 0, BIRD_R, 0, 7); ctx.fill();
-      ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = gold ? "rgba(120,80,10,.75)" : "rgba(0,0,0,.45)";
+      ctx.lineWidth = 2; ctx.stroke();
       // Wing, flapping with the climb
-      ctx.fillStyle = "#fff4c4";
+      ctx.fillStyle = gold ? "#fff0b0" : "#fff4c4";
       ctx.beginPath();
       ctx.ellipse(-3, 2 + Math.sin(t * 18) * 2.5, 7, 4.6, -0.3, 0, 7);
       ctx.fill();
@@ -393,7 +410,7 @@ var Flappy = (function () {
       ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 1; ctx.stroke();
       ctx.fillStyle = "#222";
       ctx.beginPath(); ctx.arc(7, -4.5, 2, 0, 7); ctx.fill();
-      ctx.fillStyle = "#f2711c";
+      ctx.fillStyle = gold ? "#e09a12" : "#f2711c";
       ctx.beginPath();
       ctx.moveTo(11, 0); ctx.lineTo(19, 2.5); ctx.lineTo(11, 5.5); ctx.closePath();
       ctx.fill();
@@ -436,6 +453,7 @@ var Flappy = (function () {
     return {
       start: start, stop: stop, reset: reset, flap: flap, resize: resize,
       setEffects: setEffects, setPet: setPet, setPetOpacity: setPetOpacity,
+      setGold: setGold,
       get state() { return state; },
       get score() { return scored; },
       get lives() { return lives; },
@@ -445,6 +463,7 @@ var Flappy = (function () {
                     birdY: function () { return bird.y; },
                     petSrc: function () { return petImg ? petImg.src : null; },
                     petAlpha: function () { return petAlpha; },
+                    gold: function () { return gold; },
                     PET_LAG: PET_LAG, PET_X: PET_X, BIRD_X: BIRD_X },
     };
   }

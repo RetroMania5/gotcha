@@ -56,7 +56,9 @@ var byId={};
  "btnToShop","pullBack","pullModal","pullTier","pullSet","pullImg","pullDupe",
  "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar","itemWrap","batchBack","batchModal","batchTitle","batchSet","batchGrid","batchNew","batchDone",
  "petSlot","petBack","petModal","petGrid","petNone","petClose",
- "setBtn","setBack","setModal","setClose","petOpacity","petOpacityNote"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
+ "setBtn","setBack","setModal","setClose","petOpacity","petOpacityNote",
+ "doneBack","doneModal","doneTitle","doneBody","doneNext","confetti",
+ "goldRow","goldBtn","goldNote"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
 byId.dBest.parent = El();
 // The game needs a canvas; a stub context is enough since nothing is drawn.
 byId.game.getContext = function(){ return new Proxy({}, { get: function(){
@@ -684,6 +686,91 @@ if (err) { err; } else {
   Date.now = realNow;
   out.push("after an abandoned spin: " +
            (G.state.coins < stuckBefore ? "recovers and buys again" : "LOCKED"));
+
+
+  // ── finishing the collection ─────────────────────────────────────────
+  out.push("");
+  G.state.owned = {};
+  G.state.completed = false; G.state.goldSkin = false; G.state.goldOn = false;
+  G.show("shop");
+
+  // Locked, and it says how far off you are.
+  G.renderGoldRow();
+  out.push("gold locked to begin with: " +
+           (document.getElementById("goldBtn").textContent === "Locked"));
+  out.push("  and it says the score: " + document.getElementById("goldNote").textContent);
+  document.getElementById("goldBtn").onclick();
+  out.push("  tapping it while locked does nothing: " + (G.state.goldOn === false));
+
+  // Own everything but one.
+  var all = [];
+  G.sets.forEach(function (st) { st.cards.forEach(function (c) { all.push(c); }); });
+  all.forEach(function (c, i) { if (i) G.state.owned[c.id] = 1; });
+  out.push("one card short of " + all.length + ": celebrates? " + G.maybeCelebrate());
+
+  // The last card.
+  G.state.owned[all[0].id] = 1;
+  var fired = G.maybeCelebrate();
+  out.push("the last card celebrates: " + fired);
+  out.push("  the screen says: " + document.getElementById("doneTitle").textContent);
+  out.push("  confetti thrown: " +
+           (document.getElementById("confetti").children.length > 0) +
+           " (" + document.getElementById("confetti").children.length + " pieces)");
+  out.push("  button reads: " + document.getElementById("doneNext").textContent);
+
+  // Step one -> step two: the reward, and where to find it.
+  document.getElementById("doneNext").onclick();
+  out.push("after Continue: " + document.getElementById("doneTitle").textContent);
+  out.push("  tells you where: " +
+           (document.getElementById("doneBody").textContent.indexOf("Settings") >= 0));
+  out.push("  button now reads: " + document.getElementById("doneNext").textContent);
+
+  document.getElementById("doneNext").onclick();
+  out.push("closing it puts the celebration away: " +
+           (document.getElementById("doneBack").className.indexOf("show") < 0) +
+           ", confetti cleared: " +
+           (document.getElementById("confetti").children.length === 0));
+
+  // It must not fire again.
+  out.push("it never fires twice: " + (G.maybeCelebrate() === false));
+
+  // Now equippable in settings, and it must reach the canvas.
+  G.renderGoldRow();
+  out.push("settings now offers it: " + document.getElementById("goldBtn").textContent);
+  out.push("  and says it is yours: " + document.getElementById("goldNote").textContent);
+  document.getElementById("goldBtn").onclick();
+  out.push("turning it on: " + G.state.goldOn +
+           ", the bird is gold: " + G.game_gold_probe());
+  document.getElementById("goldBtn").onclick();
+  out.push("and off again: " + G.state.goldOn +
+           ", bird gold: " + G.game_gold_probe());
+
+  // The real path: it must fire when a PULL completes the set, not only when
+  // called directly — closeReveal is what actually triggers it in play.
+  G.state.owned = {};
+  G.state.completed = false; G.state.goldSkin = false; G.state.goldOn = false;
+  all.forEach(function (c, i) { if (i) G.state.owned[c.id] = 1; });
+  G.state.coins = 1000000;
+  G.renderShop();
+  // Force the pull to land on the one missing card by owning everything else;
+  // whatever comes out, the set is completed either way.
+  G.state.owned[all[0].id] = 1;
+  var mrow2 = document.getElementById("machines").children[0];
+  oneBtn(mrow2).onclick({ currentTarget: oneBtn(mrow2) });
+  __flush();
+  document.getElementById("pullDone").onclick();     // closes the reveal
+  out.push("a pull that completes the set celebrates: " +
+           (document.getElementById("doneBack").className.indexOf("show") >= 0));
+  document.getElementById("doneNext").onclick();
+  document.getElementById("doneNext").onclick();
+
+  // It has to survive a save round trip, and be re-applied on the next run.
+  document.getElementById("goldBtn").onclick();
+  var reloaded2 = Game.load(Game.save(G.state));
+  out.push("worn state survives a save: " +
+           (reloaded2.goldOn === true && reloaded2.goldSkin === true));
+  G.prepareRun();
+  out.push("  and the next run is still gold: " + G.game_gold_probe());
 
   out.join("\n");
 }

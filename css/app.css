@@ -880,3 +880,50 @@
   .wheel { transition-duration: .4s; }
   .wheel-say.hit { animation: none; }
 }
+
+/* ── completing the collection ─────────────────────────────────────────── */
+.modal.big h1 {
+  margin: 0 0 6px;
+  font-size: 30px; font-weight: 900; letter-spacing: 1px;
+  background: linear-gradient(to bottom, #fff3b0, #e8a317 55%, #a9761a);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 6px rgba(0,0,0,.25);
+}
+
+/* Above the modal backdrop, below nothing — this is the loudest moment in
+   the game, so it is allowed to cover everything. */
+.confetti {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  display: none;
+  overflow: hidden;
+}
+.confetti.on { display: block; }
+.confetti i {
+  position: absolute;
+  left: var(--x); top: -14px;
+  width: var(--w); height: calc(var(--w) * 1.8);
+  background: var(--c);
+  border-radius: 1px;
+  opacity: 0;
+  animation: fall var(--t) linear var(--d) forwards;
+}
+@keyframes fall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(105vh) rotate(var(--r)); opacity: 0; }
+}
+
+/* The gold row in settings, before it is earned. */
+.set-row.locked b, .set-row.locked small { opacity: .55; }
+.btn.gold, .btn.ten.gold {
+  background: linear-gradient(to bottom, #ffe490, #e0a01a);
+  border-color: rgba(120,80,10,.6);
+  color: #4a3405;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti i { animation-duration: .01s; animation-delay: 0s; }
+}

@@ -730,5 +730,67 @@ ok('the rate is never fractional', (function () {
   return true;
 })());
 
+out.push('');
+out.push('── finishing the collection ──');
+var setB = makeSet('u');
+var col = Game.fresh();
+ok('an empty collection is not complete', Game.isComplete(col, [set, setB]) === false);
+ok('and nothing to celebrate', Game.checkComplete(col, [set, setB]) === false);
+
+// One short is still one short.
+set.cards.forEach(function (c) { col.owned[c.id] = 1; });
+setB.cards.forEach(function (c, i) { if (i) col.owned[c.id] = 1; });
+ok('one card short is not complete', Game.isComplete(col, [set, setB]) === false,
+   Game.totals(col, [set, setB]).have + ' of ' + Game.totals(col, [set, setB]).of);
+ok('and still nothing to celebrate', Game.checkComplete(col, [set, setB]) === false);
+ok('so no skin yet', col.goldSkin === false);
+
+// The last card.
+col.owned[setB.cards[0].id] = 1;
+ok('the last card completes it', Game.isComplete(col, [set, setB]) === true);
+var first = Game.checkComplete(col, [set, setB]);
+ok('which is worth celebrating', first === true);
+ok('it unlocks the gold skin', col.goldSkin === true);
+ok('but does not equip it for you', col.goldOn === false);
+
+// Exactly once — otherwise it fires every time you open the collection.
+ok('the celebration does not repeat', Game.checkComplete(col, [set, setB]) === false);
+ok('though it stays complete', Game.isComplete(col, [set, setB]) === true);
+
+// An empty world is not a completed one.
+ok('no sets at all is not complete', Game.isComplete(Game.fresh(), []) === false);
+
+// The skin is permanent, and equipping is separate from owning.
+var gs = Game.load(Game.save(col));
+ok('the skin survives a save', gs.goldSkin === true && gs.completed === true);
+col.goldOn = true;
+var gs2 = Game.load(Game.save(col));
+ok('and so does wearing it', gs2.goldOn === true);
+gs2.goldOn = false;
+ok('taking it off does not lose it',
+   Game.load(Game.save(gs2)).goldSkin === true);
+
+// A save that claims the skin without having earned it must not wear it.
+var cheat = Game.load(JSON.stringify({
+  coins: 0, upgrades: 0, owned: {}, items: {}, armed: {}, goldOn: true,
+}));
+ok('you cannot wear a skin you never unlocked',
+   cheat.goldSkin === false && cheat.goldOn === false);
+
+// A save from before this existed, already complete, keeps the skin sensibly.
+var older = Game.load(JSON.stringify({
+  coins: 0, upgrades: 0, owned: {}, items: {}, armed: {}, completed: true,
+}));
+ok('an already-completed save keeps its skin', older.goldSkin === true);
+
+// Selling spares must not un-complete anything.
+var soldOut = Game.fresh();
+set.cards.forEach(function (c) { soldOut.owned[c.id] = 3; });
+setB.cards.forEach(function (c) { soldOut.owned[c.id] = 3; });
+Game.checkComplete(soldOut, [set, setB]);
+Game.sellAllSpares(soldOut, [set, setB]);
+ok('selling every spare keeps it complete',
+   Game.isComplete(soldOut, [set, setB]) === true && soldOut.goldSkin === true);
+
 out.push('═══  ' + pass + ' passed, ' + fail + ' failed  ═══');
 out.join('\n');

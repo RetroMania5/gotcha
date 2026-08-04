@@ -17,8 +17,8 @@
 <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
 <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-<link rel="stylesheet" href="css/ios.css?v=bc6b7b46dc">
-<link rel="stylesheet" href="css/app.css?v=bc6b7b46dc">
+<link rel="stylesheet" href="css/ios.css?v=8714445bcc">
+<link rel="stylesheet" href="css/app.css?v=8714445bcc">
 </head>
 <body class="linen">
 
@@ -125,6 +125,18 @@
 <div class="capsule-stage" id="capsuleStage"></div>
 
 <!-- ── the pull result ────────────────────────────────────────────────── -->
+<!-- Finishing the collection. Two steps: the celebration, then what it won. -->
+<div class="modal-back" id="doneBack">
+  <div class="confetti" id="confetti"></div>
+  <div class="modal big" id="doneModal">
+    <h1 id="doneTitle">COMPLETED!!</h1>
+    <p id="doneBody">Every card in every machine. The whole collection.</p>
+    <div class="row" style="margin-top:16px">
+      <button class="btn gold" id="doneNext" style="flex:1">Continue</button>
+    </div>
+  </div>
+</div>
+
 <!-- Settings. Sound lives here now; the navbar has one button, not a row. -->
 <div class="modal-back" id="setBack">
   <div class="modal" id="setModal">
@@ -133,6 +145,11 @@
     <div class="set-row">
       <div class="grow"><b>Sound</b><small>Every tap, pipe and capsule.</small></div>
       <button class="btn small" id="soundBtn" title="Sound">🔊</button>
+    </div>
+
+    <div class="set-row" id="goldRow">
+      <div class="grow"><b>Gold bird</b><small id="goldNote">Finish the collection to unlock.</small></div>
+      <button class="btn small" id="goldBtn">Off</button>
     </div>
 
     <div class="set-row col">
@@ -185,10 +202,10 @@
   </div>
 </div>
 
-<script src="assets/manifest.js?v=bc6b7b46dc"></script>
-<script src="js/sfx.js?v=bc6b7b46dc"></script>
-<script src="js/state.js?v=bc6b7b46dc"></script>
-<script src="js/flappy.js?v=bc6b7b46dc"></script>
-<script src="js/app.js?v=bc6b7b46dc"></script>
+<script src="assets/manifest.js?v=8714445bcc"></script>
+<script src="js/sfx.js?v=8714445bcc"></script>
+<script src="js/state.js?v=8714445bcc"></script>
+<script src="js/flappy.js?v=8714445bcc"></script>
+<script src="js/app.js?v=8714445bcc"></script>
 </body>
 </html>

@@ -310,7 +310,10 @@ var Game = (function () {
       wheelSpins: 0,    // how many of your upgrades were spins
       sinceWheel: 0,    // flat upgrades since the last one
       pendingSpin: true,   // the one free spin; see load()
-      wheelGranted: true
+      wheelGranted: true,
+      completed: false,    // has the collection ever been finished
+      goldSkin: false,     // unlocked by finishing it
+      goldOn: false
     };
   }
 
@@ -342,6 +345,13 @@ var Game = (function () {
         if (n > 0) s.items[id] = n;
       });
     }
+    // Completing is permanent, and so is the skin it unlocks — losing it by
+    // selling a spare would be a nasty surprise. Equipping is separate from
+    // owning, so turning it off does not throw it away.
+    s.completed = !!d.completed;
+    s.goldSkin = !!d.goldSkin || !!d.completed;
+    s.goldOn = !!d.goldOn && s.goldSkin;
+
     // The wheel. A save written before it existed has no `wheelGranted`, and
     // that is exactly who should get the free spin — everybody already
     // playing, on their next upgrade. Saved once so it cannot be farmed by
@@ -494,6 +504,27 @@ var Game = (function () {
              complete: have === set.cards.length && set.cards.length > 0 };
   }
 
+  // ── completing the collection ──────────────────────────────────────────
+  //  Every card in every set. The reward is a gold bird, which changes
+  //  nothing about how the game plays — the collection is the achievement,
+  //  and paying it out in power would make the last cards a grind rather
+  //  than a finish line.
+  function isComplete(state, sets) {
+    var t = totals(state, sets);
+    return t.of > 0 && t.have === t.of;
+  }
+
+  //  Called after anything that can add a card. Returns true exactly once —
+  //  the run where it was actually completed — so the celebration cannot fire
+  //  again on every later visit to the collection.
+  function checkComplete(state, sets) {
+    if (state.completed) return false;
+    if (!isComplete(state, sets)) return false;
+    state.completed = true;
+    state.goldSkin = true;      // unlocked, not yet equipped
+    return true;
+  }
+
   function totals(state, sets) {
     var have = 0, of = 0, dupes = 0;
     sets.forEach(function (s) {
@@ -521,6 +552,7 @@ var Game = (function () {
     spareValue: spareValue, sellAllSpares: sellAllSpares,
     perPipe: perPipe, upgradeCost: upgradeCost, pipesToAfford: pipesToAfford,
     coinsPerPipe: coinsPerPipe, flatUpgrades: flatUpgrades, wheelMult: wheelMult,
+    isComplete: isComplete, checkComplete: checkComplete,
     WHEEL: WHEEL, WHEEL_EVERY: WHEEL_EVERY,
     isWheelNext: isWheelNext, wheelProgress: wheelProgress,
     tierOdds: tierOdds, pull: pull, setCost: setCost,

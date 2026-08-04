@@ -12,7 +12,7 @@
   //  Stamped by tools/stamp.py from the source itself. Declared here, not
   //  beside the update check that uses it, so it is assigned before anything
   //  can render with it.
-  var BUILD = "bc6b7b46dc";
+  var BUILD = "8714445bcc";
 
   var state = Game.fresh();
   var sets = [];
@@ -1013,9 +1013,96 @@
     $("batchBack").classList.add("show");
   }
 
+  // ── finishing the collection ───────────────────────────────────────────
+  //  Two steps on purpose. The first is the moment itself; the second tells
+  //  you what it won and where to find it. Putting the reward in the same
+  //  breath as the celebration buries it.
+  var doneStage = 0;
+
+  function maybeCelebrate() {
+    if (!Game.checkComplete(state, sets)) return false;
+    store();
+    showCompleted();
+    return true;
+  }
+
+  function showCompleted() {
+    doneStage = 0;
+    $("doneTitle").textContent = "COMPLETED!!";
+    $("doneBody").textContent =
+      "Every card in every machine — all " + Game.totals(state, sets).of + " of them.";
+    $("doneNext").textContent = "Continue";
+    $("doneBack").classList.add("show");
+    throwConfetti();
+    Sfx.play("reveal", "legendary");
+    setTimeout(function () { Sfx.play("tritone"); }, 420);
+  }
+
+  //  Built once per celebration and thrown away with it. Plain elements
+  //  rather than a canvas, because there is already a canvas underneath and
+  //  this has to sit above the modal backdrop.
+  function throwConfetti() {
+    var box = $("confetti");
+    if (!box) return;
+    box.innerHTML = "";
+    var tints = ["#e8a317", "#e0352b", "#3478f6", "#3fa845", "#ffffff", "#efad14"];
+    for (var i = 0; i < 70; i++) {
+      var b = document.createElement("i");
+      b.style.setProperty("--x", (Math.random() * 100).toFixed(2) + "%");
+      b.style.setProperty("--d", (0.6 + Math.random() * 0.9).toFixed(2) + "s");
+      b.style.setProperty("--t", (1.6 + Math.random() * 1.8).toFixed(2) + "s");
+      b.style.setProperty("--r", Math.floor(Math.random() * 720 - 360) + "deg");
+      b.style.setProperty("--c", tints[i % tints.length]);
+      b.style.setProperty("--w", (4 + Math.random() * 5).toFixed(1) + "px");
+      box.appendChild(b);
+    }
+    box.classList.add("on");
+  }
+
+  $("doneNext").onclick = function () {
+    Sfx.play("tock");
+    if (doneStage === 0) {
+      // Step two: what you won, and where it lives.
+      doneStage = 1;
+      $("doneTitle").textContent = "Gold bird unlocked";
+      $("doneBody").textContent =
+        "You can equip it in Settings — the gear at the top left. " +
+        "It is just for show; it changes nothing about how you fly.";
+      $("doneNext").textContent = "Done";
+      return;
+    }
+    $("doneBack").classList.remove("show");
+    $("confetti").classList.remove("on");
+    $("confetti").innerHTML = "";
+    renderGoldRow();
+    if (tab === "shop") renderShop();
+    if (tab === "bag") renderBag();
+  };
+
+  // ── the gold skin ──────────────────────────────────────────────────────
+  function renderGoldRow() {
+    var row = $("goldRow"), btn = $("goldBtn"), note = $("goldNote");
+    if (!row) return;
+    var have = !!state.goldSkin;
+    row.className = "set-row" + (have ? "" : " locked");
+    btn.textContent = !have ? "Locked" : state.goldOn ? "On" : "Off";
+    btn.className = "btn small" + (have && state.goldOn ? " gold" : " grey");
+    var t = Game.totals(state, sets);
+    note.textContent = have
+      ? "Yours for finishing the collection."
+      : "Finish the collection to unlock — " + t.have + " of " + t.of + ".";
+  }
+
+  function applyGold() {
+    if (game) game.setGold(!!state.goldSkin && !!state.goldOn);
+  }
+
   function closeReveal() {
     $("pullBack").classList.remove("show");
     $("batchBack").classList.remove("show");
+    // Checked as the reveal closes rather than as the card lands, so the
+    // celebration does not appear behind the card that caused it.
+    if (maybeCelebrate()) return;
     if (tab === "shop") renderShop();
     if (tab === "bag") renderBag();
   }
@@ -1285,6 +1372,7 @@
     // Re-applied every run: the pet may have been changed between them, and
     // reset() clears the trail the pet follows.
     applyPet();
+    applyGold();
     $("itemWrap").style.display = "";
     renderItemBar();
     renderPetSlot();
@@ -1332,7 +1420,16 @@
   $("setBtn").onclick = function () {
     Sfx.play("tock");
     renderPetOpacity();
+    renderGoldRow();
     $("setBack").classList.add("show");
+  };
+  $("goldBtn").onclick = function () {
+    if (!state.goldSkin) { Sfx.play("nope"); return; }
+    state.goldOn = !state.goldOn;
+    Sfx.play(state.goldOn ? "flick" : "tock");
+    store();
+    applyGold();
+    renderGoldRow();
   };
   $("setClose").onclick = function () {
     Sfx.play("tock");
@@ -1483,7 +1580,9 @@
     show: show, renderShop: renderShop, renderBag: renderBag,
     renderItemBar: renderItemBar, again: again, prepareRun: prepareRun,
     renderPetSlot: renderPetSlot, openPetPicker: openPetPicker, applyPet: applyPet,
-    renderPetOpacity: renderPetOpacity,
+    renderPetOpacity: renderPetOpacity, renderGoldRow: renderGoldRow,
+    maybeCelebrate: maybeCelebrate, applyGold: applyGold,
+    game_gold_probe: function () { return game ? game._internals.gold() : null; },
     get petOpacity() { return petOpacity; },
     // What the GAME is actually carrying, not what the save says.
     game_pet_probe: function () { return game ? game._internals.petSrc() : null; },
