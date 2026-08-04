@@ -21,6 +21,49 @@ var Game = (function () {
     return base * (multiplier > 0 ? multiplier : 1);
   }
 
+  // ── the wheel ──────────────────────────────────────────────────────────
+  //  Every fourth upgrade is a spin instead of a flat +2, and the spin is a
+  //  MULTIPLIER on the whole rate. Four equal quarters — the wheel is honest,
+  //  and weighting it would make the good slice a lie about the picture.
+  var WHEEL = [1.25, 1.5, 2, 3];
+  var WHEEL_EVERY = 4;          // three flat upgrades, then a spin
+
+  //  Counted rather than derived from `upgrades % 4`, because the one free
+  //  spin everybody gets lands off the cadence and modulo would then be wrong
+  //  for the rest of the game.
+  function isWheelNext(state) {
+    return !!state.pendingSpin || (state.sinceWheel | 0) >= WHEEL_EVERY - 1;
+  }
+
+  function wheelProgress(state) {
+    return {
+      have: Math.min(state.sinceWheel | 0, WHEEL_EVERY),
+      of: WHEEL_EVERY,
+      ready: isWheelNext(state),
+      free: !!state.pendingSpin,
+    };
+  }
+
+  //  What the flat upgrades have added. A spin costs a purchase but adds no
+  //  +2, so the two counts are not the same thing.
+  function flatUpgrades(state) {
+    return Math.max(0, (state.upgrades | 0) - (state.wheelSpins | 0));
+  }
+
+  function wheelMult(state) {
+    var m = Number(state.wheelMult);
+    return isFinite(m) && m > 0 ? m : 1;
+  }
+
+  //  The real rate: the flat ladder, multiplied by every wheel you have ever
+  //  spun. Rounded, because the currency has no halves and 12.5 coins a pipe
+  //  reads as a bug.
+  function coinsPerPipe(state, multiplier) {
+    var base = perPipe(flatUpgrades(state)) * wheelMult(state);
+    var m = multiplier > 0 ? multiplier : 1;
+    return Math.round(base * m);
+  }
+
   //  What the next upgrade costs. Rounded, because a price of 168.75 coins in
   //  a game whose currency has no decimals reads as a bug.
   function upgradeCost(upgrades) {
@@ -32,7 +75,7 @@ var Game = (function () {
   function pipesToAfford(state) {
     var need = upgradeCost(state.upgrades) - state.coins;
     if (need <= 0) return 0;
-    return Math.ceil(need / perPipe(state.upgrades));
+    return Math.ceil(need / coinsPerPipe(state));
   }
 
   // ── rarity ─────────────────────────────────────────────────────────────
@@ -263,6 +306,11 @@ var Game = (function () {
       items: {},        // item id -> how many held
       armed: {},        // item id -> armed for the next run
       pet: null,        // card id of the pet that follows you, or null
+      wheelMult: 1,     // everything the wheel has ever multiplied you by
+      wheelSpins: 0,    // how many of your upgrades were spins
+      sinceWheel: 0,    // flat upgrades since the last one
+      pendingSpin: true,   // the one free spin; see load()
+      wheelGranted: true
     };
   }
 
@@ -294,6 +342,16 @@ var Game = (function () {
         if (n > 0) s.items[id] = n;
       });
     }
+    // The wheel. A save written before it existed has no `wheelGranted`, and
+    // that is exactly who should get the free spin — everybody already
+    // playing, on their next upgrade. Saved once so it cannot be farmed by
+    // reloading.
+    s.wheelMult = numF(d.wheelMult, 1);
+    s.wheelSpins = num(d.wheelSpins);
+    s.sinceWheel = num(d.sinceWheel);
+    s.pendingSpin = d.wheelGranted ? !!d.pendingSpin : true;
+    s.wheelGranted = true;
+
     // Only if it is still a card you own — an equipped pet you do not have
     // would draw nothing and read as a bug.
     if (d.pet && s.owned[d.pet]) s.pet = d.pet;
@@ -309,6 +367,13 @@ var Game = (function () {
     return s;
   }
 
+  //  For values that are genuinely fractional. num() floors, which would turn
+  //  a x1.25 wheel into x1 on the next load.
+  function numF(v, dflt) {
+    var n = Number(v);
+    return isFinite(n) && n > 0 ? n : dflt;
+  }
+
   function num(v) {
     var n = Math.floor(Number(v));
     return isFinite(n) && n > 0 ? n : 0;
@@ -320,7 +385,7 @@ var Game = (function () {
   //  Each returns what happened rather than mutating and staying quiet, so
   //  the interface can say why something did not work.
   function scorePipe(state, multiplier) {
-    var got = perPipe(state.upgrades, multiplier);
+    var got = coinsPerPipe(state, multiplier);
     state.coins += got;
     state.pipes += 1;
     return got;
@@ -331,12 +396,30 @@ var Game = (function () {
     return false;
   }
 
-  function buyUpgrade(state) {
+  //  The spin's result is decided HERE, not by the animation. The wheel then
+  //  animates to a result that is already true — the same way the capsule
+  //  shows a card that has already been pulled. An animation that decides the
+  //  outcome can be interrupted into never deciding it.
+  function buyUpgrade(state, rng) {
     var cost = upgradeCost(state.upgrades);
     if (state.coins < cost) return { ok: false, reason: "coins", cost: cost };
+    var wheel = isWheelNext(state);
     state.coins -= cost;
     state.upgrades += 1;
-    return { ok: true, cost: cost, now: perPipe(state.upgrades) };
+
+    if (wheel) {
+      rng = rng || Math.random;
+      var i = Math.min(WHEEL.length - 1, Math.floor(rng() * WHEEL.length));
+      state.wheelMult = wheelMult(state) * WHEEL[i];
+      state.wheelSpins = (state.wheelSpins | 0) + 1;
+      state.sinceWheel = 0;
+      state.pendingSpin = false;
+      return { ok: true, cost: cost, wheel: true, index: i,
+               multiplier: WHEEL[i], now: coinsPerPipe(state) };
+    }
+
+    state.sinceWheel = (state.sinceWheel | 0) + 1;
+    return { ok: true, cost: cost, wheel: false, now: coinsPerPipe(state) };
   }
 
   function buyPull(state, set, index, rng) {
@@ -437,6 +520,9 @@ var Game = (function () {
     sellValue: sellValue, sellDuplicate: sellDuplicate,
     spareValue: spareValue, sellAllSpares: sellAllSpares,
     perPipe: perPipe, upgradeCost: upgradeCost, pipesToAfford: pipesToAfford,
+    coinsPerPipe: coinsPerPipe, flatUpgrades: flatUpgrades, wheelMult: wheelMult,
+    WHEEL: WHEEL, WHEEL_EVERY: WHEEL_EVERY,
+    isWheelNext: isWheelNext, wheelProgress: wheelProgress,
     tierOdds: tierOdds, pull: pull, setCost: setCost,
     fresh: fresh, load: load, save: save,
     scorePipe: scorePipe, endRun: endRun, buyUpgrade: buyUpgrade, buyPull: buyPull,

@@ -785,3 +785,98 @@
   box-shadow: 0 1px 3px rgba(0,0,0,.35);
   cursor: pointer;
 }
+
+/* ── the wheel ─────────────────────────────────────────────────────────── */
+/* Progress to the next spin. Four pips, not a smooth bar — with only four
+   steps, discrete lights say "three more" where a bar says "about here". */
+.wheel-bar .pips { display: flex; gap: 5px; margin-bottom: 3px; }
+.wheel-bar .pip {
+  flex: 1; height: 7px;
+  border-radius: 4px;
+  background: rgba(0,0,0,.13);
+  box-shadow: 0 1px 0 rgba(255,255,255,.6);
+}
+.wheel-bar .pip.on {
+  background: linear-gradient(to bottom, #7ce07c, #24a324);
+  box-shadow: 0 0 5px rgba(36,163,36,.55);
+}
+.wheel-bar.ready .pip.on {
+  background: linear-gradient(to bottom, #ffd76a, #e09a12);
+  box-shadow: 0 0 7px rgba(224,154,18,.7);
+}
+.wheel-bar small { color: #777; }
+.wheel-bar.ready small { color: #b07500; font-weight: 700; }
+
+.wheel-wrap {
+  position: fixed; left: 50%; top: 42%;
+  transform: translate(-50%, -50%);
+  width: 210px; height: 210px;
+  z-index: 30;
+}
+.wheel {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 5px solid #f3f3f5;
+  box-shadow: 0 6px 20px rgba(0,0,0,.5), 0 0 0 2px rgba(0,0,0,.35);
+  /* Four equal quarters. The gradient starts at 12 o'clock, which is where
+     the pointer is, so slice 0 begins directly under it. */
+  background: conic-gradient(
+    #4ea3e0 0deg 90deg,
+    #6dc06d 90deg 180deg,
+    #e2a33a 180deg 270deg,
+    #d9645c 270deg 360deg);
+  transition: transform 3.1s cubic-bezier(.13,.72,.16,1);
+}
+.wheel-face {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 26%, rgba(255,255,255,.4), rgba(255,255,255,0) 58%);
+  pointer-events: none;
+}
+.wheel .wl {
+  position: absolute; left: 50%; top: 50%;
+  margin: -9px 0 0 -22px;
+  width: 44px; text-align: center;
+  font-size: 14px; font-weight: 800; color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,.6);
+}
+.wheel-hub {
+  position: absolute; left: 50%; top: 50%;
+  width: 26px; height: 26px; margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, #fff, #cfcfd6);
+  border: 2px solid rgba(0,0,0,.35);
+  box-shadow: 0 2px 5px rgba(0,0,0,.4);
+}
+/* The pointer, at 12 o'clock. */
+.wheel-peg {
+  position: absolute; left: 50%; top: -14px;
+  margin-left: -9px;
+  width: 0; height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 20px solid #f3f3f5;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.55));
+  z-index: 2;
+}
+.wheel-say {
+  position: absolute; left: 50%; top: 232px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 14px; font-weight: 800; color: #fff;
+  text-shadow: 0 2px 5px rgba(0,0,0,.75);
+}
+.wheel-say.hit {
+  font-size: 17px; color: #ffe08a;
+  animation: wheelpop .45s ease-out;
+}
+@keyframes wheelpop {
+  from { transform: translateX(-50%) scale(.6); opacity: 0; }
+  to   { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+.wheel-wrap.landed .wheel { box-shadow: 0 0 26px rgba(255,224,138,.85), 0 6px 20px rgba(0,0,0,.5); }
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel { transition-duration: .4s; }
+  .wheel-say.hit { animation: none; }
+}

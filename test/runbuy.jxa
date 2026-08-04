@@ -178,9 +178,21 @@ if (err) { err; } else {
   var btn3 = oneBtn(row3);
   btn3.onclick({currentTarget: btn3});
   __timers.length = 0;                    // the sequence is abandoned midway
+
+  // Immediately afterwards the app is still, correctly, mid-sequence: a
+  // second press has to be refused or two capsules fight over the screen.
+  var midStuck = G.state.coins;
+  btn3.onclick({currentTarget: btn3});
+  out.push("a second press mid-pull is refused: " + (G.state.coins === midStuck));
+
+  // But it must not be refused for ever. The guard carries a deadline, so a
+  // tab whose timers were dropped recovers instead of locking the shop.
+  var realNow0 = Date.now;
+  Date.now = function () { return realNow0() + 600000; };
   var stuck = G.state.coins;
   btn3.onclick({currentTarget: btn3});
   __flush();
+  Date.now = realNow0;
   out.push("after an abandoned pull: " +
            (G.state.coins < stuck ? "recovers and buys again"
                                   : "STUCK — no further purchase possible"));
@@ -565,6 +577,113 @@ if (err) { err; } else {
   document.getElementById("setClose").onclick();
   out.push("Done closes it: " +
            (document.getElementById("setBack").className.indexOf("show") < 0));
+
+
+  // ── the wheel ────────────────────────────────────────────────────────
+  out.push("");
+  G.show("shop");
+  G.state.upgrades = 0; G.state.wheelSpins = 0; G.state.sinceWheel = 0;
+  G.state.wheelMult = 1; G.state.pendingSpin = true;
+  G.state.coins = 1000000;
+  G.renderShop();
+
+  var ubox = document.getElementById("upgradeCell");
+  var upBtn = ubox.children[0].children[ubox.children[0].children.length - 1];
+  out.push("upgrade button: " + upBtn.textContent);
+
+  // The free spin: buying takes over the screen and lands on a multiplier.
+  var rateBefore = Game.coinsPerPipe(G.state);
+  upBtn.onclick();
+  out.push("the wheel took the screen: " +
+           (document.getElementById("capsuleStage").className.indexOf("show") >= 0));
+  __flush();
+  out.push("and let it go again: " +
+           (document.getElementById("capsuleStage").className.indexOf("show") < 0));
+  out.push("rate " + rateBefore + " -> " + Game.coinsPerPipe(G.state) +
+           (Game.coinsPerPipe(G.state) > rateBefore ? "  (multiplied)" : "  (WRONG)"));
+  out.push("  it was a real slice: " + Game.wheelMult(G.state));
+
+  // Then three flat ones, then the wheel again.
+  var kinds = [];
+  for (var u = 0; u < 4; u++) {
+    G.state.coins = 1000000;
+    G.renderShop();
+    var b = document.getElementById("upgradeCell");
+    var was = Game.wheelMult(G.state);
+    b.children[0].children[b.children[0].children.length - 1].onclick();
+    __flush();
+    kinds.push(Game.wheelMult(G.state) !== was ? "W" : "+");
+  }
+  out.push("cadence after the free spin: " + kinds.join("") +
+           (kinds.join("") === "+++W" ? "  (three flat, then a spin)" : "  (WRONG)"));
+
+  // The progress bar has to be there and count down.
+  G.state.sinceWheel = 1; G.state.pendingSpin = false;
+  G.renderShop();
+  function barCell() {
+    var b = document.getElementById("upgradeCell");
+    for (var i = 0; i < b.children.length; i++) {
+      if (b.children[i].className.indexOf("wheel-bar") >= 0) return b.children[i];
+    }
+    return null;
+  }
+  out.push("progress bar present: " + !!barCell());
+  function pipCount(onOnly) {
+    var cellEl = barCell(), n = 0;
+    (function walk(x) { x.children.forEach(function (c) {
+      if (c.className.indexOf("pip") >= 0 && (!onOnly || c.className.indexOf("on") >= 0)) n++;
+      walk(c); }); })(cellEl);
+    return n;
+  }
+  out.push("  four pips, " + pipCount(true) + " lit at 1 of 4");
+  G.state.sinceWheel = 3;
+  G.renderShop();
+  out.push("  ready: bar is " + (barCell().className.indexOf("ready") >= 0 ? "highlighted" : "NOT"));
+  out.push("  all lit: " + (pipCount(true) === 4));
+
+  // Pressing again mid-spin must be refused — two wheels at once would leave
+  // two sequences fighting over the screen.
+  G.state.coins = 1000000;
+  G.state.sinceWheel = 3;
+  G.renderShop();
+  function upBtnNow() {
+    var b = document.getElementById("upgradeCell");
+    return b.children[0].children[b.children[0].children.length - 1];
+  }
+  var midBefore = G.state.coins;
+  upBtnNow().onclick();
+  var afterFirst = G.state.coins;
+  upBtnNow().onclick();                       // still spinning
+  out.push("a second press mid-spin is refused: " +
+           (G.state.coins === afterFirst && afterFirst < midBefore));
+  __flush();
+  out.push("  and once it finishes the shop works again: " +
+           (function () {
+             G.state.coins = 1000000;
+             G.renderShop();
+             var was = G.state.coins;
+             upBtnNow().onclick();
+             __flush();
+             return G.state.coins < was;
+           })());
+
+  // A tab backgrounded mid-spin can have its timers dropped entirely. The
+  // flag carries a deadline so that cannot lock the shop for ever.
+  G.state.coins = 1000000;
+  G.state.sinceWheel = 3;
+  G.renderShop();
+  upBtnNow().onclick();
+  __timers.length = 0;                       // the animation never finishes
+  var realNow = Date.now;
+  Date.now = function () { return realNow() + 600000; };   // ten minutes later
+  G.state.coins = 1000000;
+  G.renderShop();
+  var stuckBefore = G.state.coins;
+  upBtnNow().onclick();
+  __flush();
+  Date.now = realNow;
+  out.push("after an abandoned spin: " +
+           (G.state.coins < stuckBefore ? "recovers and buys again" : "LOCKED"));
 
   out.join("\n");
 }

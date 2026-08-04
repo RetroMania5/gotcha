@@ -12,7 +12,7 @@
   //  Stamped by tools/stamp.py from the source itself. Declared here, not
   //  beside the update check that uses it, so it is assigned before anything
   //  can render with it.
-  var BUILD = "f4270c7e0e";
+  var BUILD = "bc6b7b46dc";
 
   var state = Game.fresh();
   var sets = [];
@@ -200,7 +200,7 @@
 
   function renderCoins() {
     $("coinCount").textContent = state.coins.toLocaleString();
-    $("rateLine").textContent = Game.perPipe(state.upgrades) + " coins a pipe";
+    $("rateLine").textContent = Game.coinsPerPipe(state) + " coins a pipe";
   }
 
   // ── the shop ───────────────────────────────────────────────────────────
@@ -212,18 +212,32 @@
 
     var box = $("upgradeCell");
     box.innerHTML = "";
+    var wp = Game.wheelProgress(state);
+    var now = Game.coinsPerPipe(state);
+
+    // What the next purchase actually does. A spin has no knowable "next
+    // number", so it says so rather than printing a figure it cannot honour.
+    var nextBit = wp.ready
+      ? "<b style='display:inline'>Spin the wheel</b>"
+      : "<b style='display:inline'>" +
+        Math.round(Game.perPipe(Game.flatUpgrades(state) + 1) * Game.wheelMult(state)) +
+        "</b>";
+
     box.appendChild(cell(
-      pill("＋", "linear-gradient(to bottom,#7ce07c,#24a324)"),
-      "<b>Better wings</b><small>Now " + Game.perPipe(state.upgrades) +
-        " a pipe → <b style='display:inline'>" + Game.perPipe(state.upgrades + 1) +
-        "</b>. Bought " + state.upgrades + " time" + (state.upgrades === 1 ? "" : "s") + ".</small>",
+      pill(wp.ready ? "◉" : "＋",
+           wp.ready ? "linear-gradient(to bottom,#ffd76a,#e09a12)"
+                    : "linear-gradient(to bottom,#7ce07c,#24a324)"),
+      "<b>Better wings</b><small>Now " + now + " a pipe → " + nextBit +
+        ". Bought " + state.upgrades + " time" + (state.upgrades === 1 ? "" : "s") + ".</small>",
       button(cost.toLocaleString(), can ? "gold" : "grey", !can, function () {
-        var r = Game.buyUpgrade(state);
-        if (!r.ok) return;
-        Sfx.play("bloop");
-        store(); renderCoins(); renderShop();
+        buyUpgrade();
       })
     ));
+
+    // The run-up to the wheel. Four steps, so you can see it coming rather
+    // than being surprised by an upgrade that behaves differently.
+    box.appendChild(wheelBar(wp));
+
     if (!can) {
       // "500 coins" means nothing without knowing what a pipe pays.
       box.appendChild(cell(null,
@@ -312,6 +326,27 @@
     obox.appendChild(v);
   }
 
+  //  The progress bar to the next wheel. Pips rather than a smooth bar —
+  //  there are only four steps, and four discrete lights say "three more"
+  //  where a bar just looks three-quarters full.
+  function wheelBar(wp) {
+    var c = document.createElement("div");
+    c.className = "cell wheel-bar" + (wp.ready ? " ready" : "");
+    var pips = "";
+    for (var i = 0; i < wp.of; i++) {
+      var on = wp.ready || i < wp.have;
+      pips += '<span class="pip' + (on ? " on" : "") +
+              (wp.ready && i === wp.of - 1 ? " last" : "") + '"></span>';
+    }
+    var label = wp.free ? "Free spin ready"
+              : wp.ready ? "Next upgrade spins the wheel"
+              : (wp.of - wp.have) + " more to the wheel";
+    c.innerHTML =
+      '<div class="grow"><div class="pips">' + pips + '</div>' +
+      '<small>' + esc(label) + '</small></div>';
+    return c;
+  }
+
   function cell(art, html, btn) {
     var c = document.createElement("div");
     c.className = "cell";
@@ -323,6 +358,95 @@
     if (btn) c.appendChild(btn);
     return c;
   }
+  //  Buying an upgrade. Ordinary ones are instant; a wheel takes over the
+  //  screen the way a capsule does.
+  var spinningWheel = false;
+  function buyUpgrade() {
+    if (busy()) return;
+    var r = Game.buyUpgrade(state, Math.random);
+    if (!r.ok) { Sfx.play("nope"); return; }
+    store();
+    renderCoins();
+    if (!r.wheel) { Sfx.play("bloop"); renderShop(); return; }
+    playWheel(r);
+  }
+
+  //  The wheel. Four equal quarters; the result is already decided, so the
+  //  spin is choreography rather than a draw. It is rotated so the winning
+  //  slice finishes under the pointer.
+  var WHEEL_BEATS = { hide: 0, show: 120, spin: 420, land: 3600, done: 5000 };
+
+  function playWheel(r) {
+    clearSequence();
+    spinningWheel = true;
+    beginSequence(WHEEL_BEATS.done);
+    var stage = $("capsuleStage");
+    stage.innerHTML = "";
+    stage.classList.add("show");
+    var screen = $("screen" + cap(tab));
+    if (screen) screen.classList.add("busy");
+    at(WHEEL_BEATS.hide + 60, function () { stage.classList.add("dim"); });
+
+    var n = Game.WHEEL.length;
+    var seg = 360 / n;
+    var wrap = document.createElement("div");
+    wrap.className = "wheel-wrap";
+    var labels = "";
+    for (var i = 0; i < n; i++) {
+      // Each label sits at the middle of its own slice.
+      labels += '<span class="wl" style="transform:rotate(' +
+                (i * seg + seg / 2) + 'deg) translateY(-62px) rotate(' +
+                (-(i * seg + seg / 2)) + 'deg)">×' + Game.WHEEL[i] + '</span>';
+    }
+    wrap.innerHTML =
+      '<div class="wheel-peg"></div>' +
+      '<div class="wheel" id="theWheel"><div class="wheel-face"></div>' + labels + '</div>' +
+      '<div class="wheel-hub"></div>' +
+      '<div class="wheel-say" id="wheelSay">Better wings</div>';
+    stage.appendChild(wrap);
+
+    var w = wrap.querySelector(".wheel");
+
+    at(WHEEL_BEATS.spin, function () {
+      Sfx.play("crank");
+      var riser = Sfx.riser((WHEEL_BEATS.land - WHEEL_BEATS.spin) / 1000);
+      pullTimers.push(setTimeout(function () { if (riser) riser.stop(); },
+                                 WHEEL_BEATS.land - WHEEL_BEATS.spin));
+      // Six whole turns, then however far round the winning slice is. The
+      // pointer is at the top, so the slice has to come back TO it.
+      var target = 360 * 6 - (r.index * seg + seg / 2);
+      w.style.transform = "rotate(" + target + "deg)";
+    });
+
+    at(WHEEL_BEATS.land, function () {
+      Sfx.play("crack");
+      Sfx.play("reveal", r.multiplier >= 3 ? "legendary"
+                       : r.multiplier >= 2 ? "veryrare" : "rare");
+      if (r.multiplier >= 3) {
+        setTimeout(function () { Sfx.play("tritone"); }, 380);
+      }
+      var say = $("wheelSay");
+      if (say) {
+        say.textContent = "×" + r.multiplier + " — now " + r.now + " a pipe";
+        say.className = "wheel-say hit";
+      }
+      wrap.classList.add("landed");
+    });
+
+    // Backstop: a throttled tab must not leave the shop hidden for ever.
+    pullTimers.push(setTimeout(function () {
+      if (spinningWheel) { spinningWheel = false; clearSequence(); renderShop(); }
+    }, WHEEL_BEATS.done + 2500));
+
+    at(WHEEL_BEATS.done, function () {
+      spinningWheel = false;
+      stage.classList.remove("show", "dim");
+      stage.innerHTML = "";
+      if (screen) screen.classList.remove("busy");
+      renderShop();
+    });
+  }
+
   //  The item machine. Three reels, all landing on the same thing — you
   //  cannot lose here, so the "win" line is the only outcome there is, and
   //  showing three matching symbols is what makes that read as a win rather
@@ -479,10 +603,9 @@
   function doPull(set, index, fromEl) {
     // Pressing a second machine mid-sequence would leave two capsules and two
     // risers running over each other.
-    if (pulling) return;
+    if (busy()) return;
     var r = Game.buyPull(state, set, index, Math.random);
     if (!r.ok) return;
-    pulling = true;
     lastPull = { set: set, index: index };
     store();
     renderCoins();
@@ -518,6 +641,23 @@
   };
   var CLIMB_SECONDS = (BEATS.open - BEATS.climb) / 1000;
 
+  //  Whether a takeover sequence (capsule, batch or wheel) is running.
+  //
+  //  The flag alone is not enough: if the tab is backgrounded the timers that
+  //  would clear it can be throttled or dropped, and the shop would refuse
+  //  every purchase afterwards with no explanation. So the flag carries a
+  //  deadline, and past it the sequence is presumed dead.
+  var seqEndsAt = 0;
+
+  function beginSequence(totalMs) {
+    seqEndsAt = Date.now() + totalMs + 3000;
+  }
+  function busy() {
+    if (!pulling && !spinningWheel) return false;
+    if (Date.now() > seqEndsAt) { clearSequence(); return false; }
+    return true;
+  }
+
   var pullTimers = [];
   //  Each beat is guarded on its own. One throwing used to abandon the whole
   //  sequence with the shop hidden and the flag still set.
@@ -537,6 +677,7 @@
     // through, the flag would otherwise stay set and every later purchase
     // would be refused with no explanation.
     pulling = false;
+    spinningWheel = false;
     var stage = $("capsuleStage");
     if (stage) { stage.classList.remove("show", "dim"); stage.innerHTML = ""; }
     ["play", "shop", "bag"].forEach(function (t) {
@@ -547,6 +688,10 @@
 
   function playCapsule(set, result, fromEl, done) {
     clearSequence();
+    // After clearSequence, not before: clearing is what releases the flag, so
+    // raising it first meant the guard was never actually set during a pull.
+    pulling = true;
+    beginSequence(BEATS.finish);
     var rarity = Game.RARITY[result.card.rarity];
     var stage = $("capsuleStage");
     stage.innerHTML = "";
@@ -646,10 +791,9 @@
   //  ten small reveals into one big one, and it covers the jump to the
   //  card-by-card walkthrough that follows.
   function doPullMany(set, index, fromEl) {
-    if (pulling) return;
+    if (busy()) return;
     var r = Game.buyPullMany(state, set, index, Game.BATCH, Math.random);
     if (!r.ok) { Sfx.play("nope"); return; }
-    pulling = true;
     lastPull = { set: set, index: index };
     store();
     renderCoins();
@@ -695,6 +839,8 @@
 
   function playCapsuleBatch(set, results, fromEl, done) {
     clearSequence();
+    pulling = true;
+    beginSequence(TEN.finish);
     var stage = $("capsuleStage");
     stage.innerHTML = "";
     stage.classList.add("show");

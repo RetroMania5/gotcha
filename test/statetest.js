@@ -149,11 +149,20 @@ ok('and says why', Game.buyUpgrade(s).reason === 'coins');
 ok('with no coins taken', s.coins === 0);
 
 s.coins = 100;
-var bought = Game.buyUpgrade(s);
+// A fresh player's FIRST upgrade is the one free spin, so this is a wheel.
+var bought = Game.buyUpgrade(s, function () { return 0; });
 ok('one you can afford goes through', bought.ok === true);
 ok('the coins are taken', s.coins === 90, s.coins + '');
 ok('the upgrade is recorded', s.upgrades === 1);
-ok('and it reports the new rate', bought.now === 12);
+ok('the first one is the free spin', bought.wheel === true);
+ok('and it reports the new rate', bought.now === Math.round(10 * bought.multiplier),
+   bought.now + '');
+// The one after it is an ordinary +2 on the flat ladder.
+s.coins = 100;
+var flat = Game.buyUpgrade(s, function () { return 0; });
+ok('the next is a flat upgrade', flat.wheel === false);
+ok('which adds two before the multiplier',
+   flat.now === Math.round(12 * Game.wheelMult(s)), flat.now + '');
 
 s.coins = 10;
 ok('a pull you cannot afford is refused',
@@ -599,6 +608,127 @@ Game.sellAllSpares(keep, [set]);
 ok('selling every spare keeps the pet', Game.petId(keep) === 't_L',
    'copies left: ' + keep.owned['t_L']);
 
+
+out.push('');
+out.push('── the wheel ──');
+ok('four equal slices', Game.WHEEL.length === 4, Game.WHEEL.join(', '));
+ok('and it lands every fourth upgrade', Game.WHEEL_EVERY === 4);
+ok('every slice is a gain, none a loss',
+   Game.WHEEL.every(function (v) { return v > 1; }));
+
+// Everyone gets one free spin, on whatever their next upgrade is.
+var w = Game.fresh();
+ok('a new player spins straight away', Game.isWheelNext(w) === true);
+w.coins = 1000;
+var spin1 = Game.buyUpgrade(w, function () { return 0; });
+ok('the first upgrade is a spin', spin1.wheel === true);
+ok('and it landed on the first slice', spin1.multiplier === Game.WHEEL[0], spin1.multiplier + '');
+ok('the rate is multiplied, not added',
+   Game.coinsPerPipe(w) === Math.round(10 * 1.25), Game.coinsPerPipe(w) + '');
+ok('a spin costs an upgrade but adds no flat step',
+   w.upgrades === 1 && Game.flatUpgrades(w) === 0);
+ok('the free spin is used up', w.pendingSpin === false);
+ok('and the next three are ordinary', Game.isWheelNext(w) === false);
+
+// Three flat, then the wheel again.
+var kinds = [];
+for (var i = 0; i < 4; i++) {
+  w.coins = 100000;
+  kinds.push(Game.buyUpgrade(w, function () { return 0.99; }).wheel ? 'W' : '+');
+}
+ok('three flat upgrades then a spin', kinds.join('') === '+++W', kinds.join(''));
+ok('the last slice is reachable', Game.wheelMult(w) === 1.25 * 3, Game.wheelMult(w) + '');
+
+// The multipliers compound.
+var comp = Game.fresh();
+comp.coins = 10000000;
+comp.pendingSpin = false; comp.sinceWheel = 3;
+Game.buyUpgrade(comp, function () { return 0.99; });   // x3
+comp.sinceWheel = 3;
+Game.buyUpgrade(comp, function () { return 0.99; });   // x3 again
+ok('wheels compound rather than replace', Game.wheelMult(comp) === 9, Game.wheelMult(comp) + '');
+
+// Every slice must actually be reachable, and land in equal quarters.
+ok('each slice comes up about a quarter of the time', (function () {
+  var seed = 4242;
+  function rng() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+  var n = 40000, seen = [0, 0, 0, 0];
+  for (var k = 0; k < n; k++) {
+    var st = Game.fresh();
+    st.coins = 100;
+    seen[Game.buyUpgrade(st, rng).index]++;
+  }
+  return seen.every(function (c) { return Math.abs(c / n - 0.25) < 0.012; });
+})(), 'within 1.2 points over 40,000 spins');
+
+// The progress bar.
+var prog = Game.fresh();
+prog.pendingSpin = false;
+ok('a fresh cycle shows nothing done', Game.wheelProgress(prog).have === 0);
+prog.sinceWheel = 2;
+ok('two in, it says two of four',
+   Game.wheelProgress(prog).have === 2 && Game.wheelProgress(prog).of === 4);
+ok('and is not ready yet', Game.wheelProgress(prog).ready === false);
+prog.sinceWheel = 3;
+ok('three in, the next one spins', Game.wheelProgress(prog).ready === true);
+prog.sinceWheel = 0; prog.pendingSpin = true;
+ok('a free spin reads as ready', Game.wheelProgress(prog).ready === true &&
+   Game.wheelProgress(prog).free === true);
+
+// Persistence. A fractional multiplier through the integer reader would come
+// back as 1 and quietly delete everything the wheel ever gave.
+var ws = Game.fresh();
+ws.coins = 1000;
+Game.buyUpgrade(ws, function () { return 0; });        // x1.25
+var wl = Game.load(Game.save(ws));
+ok('a fractional multiplier survives a save', Game.wheelMult(wl) === 1.25,
+   Game.wheelMult(wl) + '');
+ok('and so does the rate it produces',
+   Game.coinsPerPipe(wl) === Game.coinsPerPipe(ws), Game.coinsPerPipe(wl) + '');
+ok('the spin count survives too', wl.wheelSpins === 1);
+
+// A save from before the wheel existed gets the free spin, exactly once.
+var oldSave = Game.load(JSON.stringify({
+  coins: 500, upgrades: 7, owned: {}, items: {}, armed: {},
+}));
+ok('an existing player gets a free spin', oldSave.pendingSpin === true);
+ok('their flat upgrades are untouched', Game.flatUpgrades(oldSave) === 7);
+ok('and their rate is unchanged by the update',
+   Game.coinsPerPipe(oldSave) === Game.perPipe(7), Game.coinsPerPipe(oldSave) + '');
+var afterOnce = Game.load(Game.save(oldSave));
+ok('the free spin is not re-granted every load', afterOnce.pendingSpin === true,
+   'still pending because unspent');
+oldSave.coins = 100000;
+Game.buyUpgrade(oldSave, function () { return 0.5; });
+var afterSpent = Game.load(Game.save(oldSave));
+ok('and once spent it does not come back', afterSpent.pendingSpin === false);
+
+// Reloading must not farm spins.
+var farm = Game.load(JSON.stringify({
+  coins: 0, upgrades: 2, owned: {}, items: {}, armed: {},
+  wheelGranted: true, pendingSpin: false, sinceWheel: 1,
+}));
+ok('a save that already spent its spin does not get another',
+   farm.pendingSpin === false && Game.isWheelNext(farm) === false);
+
+// Doubling money still works on top of a multiplied rate.
+var both = Game.fresh();
+both.coins = 1000;
+Game.buyUpgrade(both, function () { return 0.99; });   // x3
+ok('Extra Money multiplies the wheeled rate',
+   Game.coinsPerPipe(both, 2) === Game.coinsPerPipe(both) * 2,
+   Game.coinsPerPipe(both) + ' -> ' + Game.coinsPerPipe(both, 2));
+
+// The rate must always be a whole number of coins.
+ok('the rate is never fractional', (function () {
+  var st = Game.fresh();
+  st.coins = 1e9;
+  for (var k = 0; k < 30; k++) {
+    Game.buyUpgrade(st, function () { return k / 30; });
+    if (Game.coinsPerPipe(st) % 1 !== 0) return false;
+  }
+  return true;
+})());
 
 out.push('═══  ' + pass + ' passed, ' + fail + ' failed  ═══');
 out.join('\n');
