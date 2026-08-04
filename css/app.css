@@ -673,14 +673,6 @@
 }
 .whiteout.on { opacity: 1; }
 
-/* Which card of the batch you are looking at. Empty on a single pull. */
-.pull-count {
-  margin: 0 0 2px;
-  font-size: 11px; font-weight: 700; letter-spacing: .5px;
-  text-transform: uppercase;
-  color: #8e8e93;
-  min-height: 13px;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .whiteout { transition: none; }
@@ -688,3 +680,28 @@
 
 /* Which build is running. Quiet — it is a diagnostic, not a feature. */
 .build-line small { color: #a0a0a6; font-size: 10px; letter-spacing: .4px; }
+
+/* ── the ×10 summary ───────────────────────────────────────────────────── */
+/* Five across, two down. Reuses .card, so the rarity colours are the same
+   ones the collection uses rather than a second vocabulary. */
+.batch-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  margin-top: 10px;
+}
+.batch-grid .card { padding: 3px; border-radius: 6px; }
+.batch-grid .card .n {
+  font-size: 9px; padding: 0;
+  color: #666;
+}
+/* Anything you did not already own. The point of a ten-pull is finding out
+   what is new, so that has to read before the duplicates do. */
+.batch-grid .new-tag {
+  display: block;
+  font-size: 8px; font-weight: 800; letter-spacing: .3px;
+  color: #2b8a34;
+}
+.batch-grid .card.fresh { box-shadow: 0 0 0 1.5px #47b356, 0 1px 3px rgba(0,0,0,.3); }
+#batchModal h2 { margin-bottom: 0; }
+#batchNew { font-size: 12px; color: #555; }

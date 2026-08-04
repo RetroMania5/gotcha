@@ -12,7 +12,7 @@
   //  Stamped by tools/stamp.py from the source itself. Declared here, not
   //  beside the update check that uses it, so it is assigned before anything
   //  can render with it.
-  var BUILD = "f775120326";
+  var BUILD = "ee2372dbf9";
 
   var state = Game.fresh();
   var sets = [];
@@ -552,7 +552,7 @@
     renderCoins();
     playCapsuleBatch(set, r.results, fromEl, function () {
       pulling = false;
-      startReveal(set, index, r.results);
+      showBatch(set, index, r.results);
     });
   }
 
@@ -707,63 +707,66 @@
   }
 
   // ── the reveal ─────────────────────────────────────────────────────────
-  //  One card at a time, whether there is one of them or ten. A single path,
-  //  so a batch cannot drift out of step with a single pull.
-  var reveal = null;
-
-  function showResult(set, index, r) { startReveal(set, index, [r]); }
-
-  function startReveal(set, index, results) {
-    reveal = { set: set, index: index, results: results, i: 0 };
-    showReveal();
-  }
-
-  function showReveal() {
-    if (!reveal) return;
-    var q = reveal;
-    var r = q.results[q.i];
-    var single = q.results.length === 1;
-    var last = q.i === q.results.length - 1;
-
+  //  A single pull gets the full-size card. A batch gets everything on one
+  //  screen — ten taps of Next to see what you already watched come out of
+  //  the machine is a toll, not a reveal.
+  function showResult(set, index, r) {
     var rarity = Game.RARITY[r.card.rarity];
     $("pullTier").textContent = rarity.label;
     $("pullTier").style.color = rarity.tint;
-    $("pullSet").textContent = q.set.name;
+    $("pullSet").textContent = set.name;
     $("pullImg").src = "assets/" + r.card.file;
     $("pullDupe").textContent = r.duplicate
       ? "You already had this one — that makes " + r.count + "."
       : "New!";
     $("pullModal").className = "modal " + r.card.rarity;
 
-    // Only shown for a batch. "1 of 1" on a single pull would be noise.
-    $("pullCount").textContent = single ? "" : (q.i + 1) + " of " + q.results.length;
-
-    var done = $("pullDone"), again = $("pullAgain");
-    if (single) {
-      var price = Game.setCost(q.index);
-      done.textContent = "Done";
-      done.style.display = "";
-      again.style.display = "";
-      again.textContent = "Again · " + price;
-      again.disabled = state.coins < price;
-    } else {
-      // Walking the batch: one button that moves forward, and on the last card
-      // it becomes the way out. Offering "Again" mid-batch would abandon the
-      // cards you have not looked at yet.
-      again.style.display = last ? "none" : "";
-      again.textContent = "Next";
-      again.disabled = false;
-      done.style.display = last ? "" : "none";
-      done.textContent = "Done";
-    }
+    var price = Game.setCost(index);
+    var again = $("pullAgain");
+    again.textContent = "Again · " + price;
+    again.disabled = state.coins < price;
 
     Sfx.play("swoosh");
     $("pullBack").classList.add("show");
   }
 
+  //  The batch summary. Sorted best-first, so the thing worth seeing is at the
+  //  top rather than buried at position seven.
+  function showBatch(set, index, results) {
+    var order = Game.RARITY_ORDER;
+    var sorted = results.slice().sort(function (a, b) {
+      return order.indexOf(b.card.rarity) - order.indexOf(a.card.rarity);
+    });
+
+    var grid = $("batchGrid");
+    grid.innerHTML = "";
+    sorted.forEach(function (r) {
+      var d = document.createElement("div");
+      d.className = "card " + r.card.rarity + (r.duplicate ? "" : " fresh");
+      d.innerHTML =
+        '<img src="assets/' + r.card.file + '" alt="">' +
+        (r.duplicate ? '<span class="n">×' + r.count + '</span>'
+                     : '<span class="new-tag">NEW</span>');
+      grid.appendChild(d);
+    });
+
+    var fresh = results.filter(function (r) { return !r.duplicate; }).length;
+    $("batchTitle").textContent = "You got " + results.length;
+    $("batchSet").textContent = set.name;
+    $("batchNew").textContent = fresh
+      ? fresh + (fresh === 1 ? " is new" : " are new")
+      : "All duplicates this time.";
+    // Tinted by the best thing in the batch — the same signal the single-pull
+    // modal gives, at a glance.
+    $("batchModal").className = "modal " + sorted[0].card.rarity;
+
+    Sfx.play("swoosh");
+    $("batchBack").classList.add("show");
+  }
+
   function closeReveal() {
-    reveal = null;
     $("pullBack").classList.remove("show");
+    $("batchBack").classList.remove("show");
     if (tab === "shop") renderShop();
     if (tab === "bag") renderBag();
   }
@@ -772,18 +775,12 @@
     Sfx.play("tock");
     closeReveal();
   };
+  $("batchDone").onclick = function () {
+    Sfx.play("tock");
+    closeReveal();
+  };
   $("pullAgain").onclick = function () {
-    // Mid-batch this is "Next"; on a single pull it buys another.
-    if (reveal && reveal.results.length > 1) {
-      if (reveal.i < reveal.results.length - 1) {
-        reveal.i++;
-        Sfx.play("tock");
-        showReveal();
-      }
-      return;
-    }
     if (!lastPull) return;
-    reveal = null;
     $("pullBack").classList.remove("show");
     doPull(lastPull.set, lastPull.index, null);
   };

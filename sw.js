@@ -22,7 +22,7 @@
 //  means new filenames. Those are cache-first, which is safe precisely
 //  because their names are stable.
 // ═══════════════════════════════════════════════════════════════════════
-var VERSION = "gotcha-f775120326";
+var VERSION = "gotcha-ee2372dbf9";
 var SHELL = [
   "./",
   "./index.html",

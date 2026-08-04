@@ -54,7 +54,7 @@ var byId={};
  "tabPlay","tabShop","tabBag","upgradeCell","machines","oddsCell","bagTotals","bagBar",
  "bagSets","game","hud","ovReady","ovDead","dPipes","dEarned","dBest","btnAgain",
  "btnToShop","pullBack","pullModal","pullTier","pullSet","pullImg","pullDupe",
- "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar","itemWrap","pullCount"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
+ "pullDone","pullAgain","capsuleStage","soundBtn","sellAllBtn","burstLayer","itemCell","itemBar","itemWrap","batchBack","batchModal","batchTitle","batchSet","batchGrid","batchNew","batchDone"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
 byId.dBest.parent = El();
 // The game needs a canvas; a stub context is enough since nothing is drawn.
 byId.game.getContext = function(){ return new Proxy({}, { get: function(){
@@ -350,6 +350,10 @@ if (err) { err; } else {
   out.push("  priced at ten singles: " +
            (ten.textContent.indexOf(String(Game.setCost(0) * 10)) >= 0));
 
+  // Earlier single pulls in this file leave their modal open; close it so the
+  // "no walkthrough" check below is about the batch and not about them.
+  document.getElementById("pullDone").onclick();
+
   var ownedBefore = Object.keys(G.state.owned).reduce(function (t, k) {
     return t + G.state.owned[k];
   }, 0);
@@ -364,46 +368,54 @@ if (err) { err; } else {
   out.push("coins spent: " + (coinsBefore - G.state.coins) +
            ((coinsBefore - G.state.coins) === Game.setCost(0) * 10 ? "  (ten singles)" : "  (WRONG)"));
 
-  // The whole batch must land on screen, not one capsule reused ten times.
-  out.push("the reveal opened: " +
-           (document.getElementById("pullBack").className.indexOf("show") >= 0));
-  out.push("starts at the first: " + document.getElementById("pullCount").textContent);
+  // Everything lands on one screen — no walkthrough.
+  out.push("the summary opened: " +
+           (document.getElementById("batchBack").className.indexOf("show") >= 0));
+  out.push("title: " + document.getElementById("batchTitle").textContent);
+  var tiles = document.getElementById("batchGrid").children;
+  out.push("tiles shown: " + tiles.length +
+           (tiles.length === 10 ? "  (all ten at once)" : "  (WRONG)"));
 
-  // Walk it. "Next" advances; only the last card offers a way out.
-  var nextBtn = document.getElementById("pullAgain");
-  var doneBtn = document.getElementById("pullDone");
-  out.push("mid-batch button reads: " + nextBtn.textContent +
-           ", Done hidden: " + (doneBtn.style.display === "none"));
-  var seen = [document.getElementById("pullImg").src];
-  for (var k = 0; k < 9; k++) {
-    nextBtn.onclick();
-    seen.push(document.getElementById("pullImg").src);
+  // Best first, so the thing worth seeing is not buried at position seven.
+  var order = Game.RARITY_ORDER;
+  var ranks = [];
+  for (var ti = 0; ti < tiles.length; ti++) {
+    var cls = tiles[ti].className.split(/\s+/);
+    for (var ri = 0; ri < order.length; ri++) {
+      if (cls.indexOf(order[ri]) >= 0) { ranks.push(ri); break; }
+    }
   }
-  out.push("stepped through: " + document.getElementById("pullCount").textContent);
-  out.push("  showed ten cards: " + (seen.length === 10));
-  out.push("  and every one was actually rendered: " +
-           (seen.filter(function (x) { return !!x; }).length === 10));
-  out.push("on the last: Next hidden " + (nextBtn.style.display === "none") +
-           ", Done shown " + (doneBtn.style.display !== "none") +
-           ", label " + doneBtn.textContent);
+  var sortedBest = true;
+  for (var si = 1; si < ranks.length; si++) if (ranks[si] > ranks[si-1]) sortedBest = false;
+  out.push("  sorted best-first: " + sortedBest + "  [" + ranks.join(",") + "]");
+  out.push("  every tile knows its rarity: " + (ranks.length === tiles.length));
 
-  // Pressing Next past the end must not run off the array.
-  nextBtn.onclick();
-  out.push("Next past the end is a no-op: " +
-           (document.getElementById("pullCount").textContent === "10 of 10"));
+  // New vs duplicate has to be visible, or the summary says nothing useful.
+  var freshTiles = 0;
+  for (var fi = 0; fi < tiles.length; fi++) {
+    if (tiles[fi].className.indexOf("fresh") >= 0) freshTiles++;
+  }
+  out.push("  marked new: " + freshTiles + " of 10");
+  out.push("  and the line agrees: " + document.getElementById("batchNew").textContent);
 
-  doneBtn.onclick();
-  out.push("Done closes it: " +
+  // There is no Next any more.
+  out.push("no walkthrough left: " +
            (document.getElementById("pullBack").className.indexOf("show") < 0));
 
-  // A single pull must still say nothing about counts, and keep Again.
+  document.getElementById("batchDone").onclick();
+  out.push("Done closes it: " +
+           (document.getElementById("batchBack").className.indexOf("show") < 0));
+
+  // A single pull is untouched: the big card, and Again — not the summary.
   G.state.coins = 100000;
   G.renderShop();
   oneBtn(document.getElementById("machines").children[0]).onclick({
     currentTarget: oneBtn(document.getElementById("machines").children[0]) });
   __flush();
-  out.push("single pull count line is blank: " +
-           (document.getElementById("pullCount").textContent === ""));
+  out.push("single pull shows the card modal: " +
+           (document.getElementById("pullBack").className.indexOf("show") >= 0) +
+           ", not the summary: " +
+           (document.getElementById("batchBack").className.indexOf("show") < 0));
   out.push("  and it still offers Again: " +
            (document.getElementById("pullAgain").textContent.indexOf("Again") === 0));
   document.getElementById("pullDone").onclick();
@@ -415,7 +427,7 @@ if (err) { err; } else {
   var c2 = G.state.coins;
   t2.onclick({ currentTarget: t2 });
   __flush();
-  document.getElementById("pullDone").onclick();
+  document.getElementById("batchDone").onclick();
   G.renderShop();
   var t3 = tenBtn(document.getElementById("machines").children[1]);
   var c3 = G.state.coins;
@@ -423,7 +435,7 @@ if (err) { err; } else {
   __flush();
   out.push("a second batch also goes through: " +
            (G.state.coins < c3 && c3 < c2 ? "yes" : "BLOCKED"));
-  document.getElementById("pullDone").onclick();
+  document.getElementById("batchDone").onclick();
 
   // Too poor for ten: refused outright, nothing taken, no reveal.
   G.state.coins = Game.setCost(0) * 10 - 1;
@@ -435,7 +447,7 @@ if (err) { err; } else {
   __flush();
   out.push("one coin short: coins unchanged " + (G.state.coins === poorCoins) +
            ", no reveal " +
-           (document.getElementById("pullBack").className.indexOf("show") < 0));
+           (document.getElementById("batchBack").className.indexOf("show") < 0));
 
   out.push("no beat threw across every batch: " + (__warns.length === 0) +
            (__warns.length ? "  first: " + __warns[0] : ""));
