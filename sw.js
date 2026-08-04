@@ -11,12 +11,18 @@
 //  fallback when the network fails. Online, you always get the newest
 //  version; on a train, you get the last one that worked.
 //
+//  And crucially, that network fetch is {cache: "no-store"}. Plain fetch()
+//  still goes through the BROWSER's HTTP cache, and GitHub Pages serves
+//  everything with max-age=600 — so "network first" was happily returning a
+//  stale copy it had never asked the network for. That is exactly the bug
+//  this worker was written to avoid, arriving through a different door.
+//
 //  Pictures are the exception. There are 120, they are the bulk of the
 //  download, and a card's image never changes once generated — a new set
 //  means new filenames. Those are cache-first, which is safe precisely
 //  because their names are stable.
 // ═══════════════════════════════════════════════════════════════════════
-var VERSION = "gotcha-v1";
+var VERSION = "gotcha-f775120326";
 var SHELL = [
   "./",
   "./index.html",
@@ -81,9 +87,10 @@ self.addEventListener("fetch", function (e) {
     return;
   }
 
-  // Everything else: network first. This is what keeps edits arriving.
+  // Everything else: network first, going past the HTTP cache. This is what
+  // keeps edits arriving.
   e.respondWith(
-    fetch(req).then(function (res) {
+    fetch(req, { cache: "no-store" }).then(function (res) {
       if (res && res.ok) {
         var copy = res.clone();
         caches.open(VERSION).then(function (c) { c.put(req, copy); });

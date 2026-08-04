@@ -685,3 +685,6 @@
 @media (prefers-reduced-motion: reduce) {
   .whiteout { transition: none; }
 }
+
+/* Which build is running. Quiet — it is a diagnostic, not a feature. */
+.build-line small { color: #a0a0a6; font-size: 10px; letter-spacing: .4px; }

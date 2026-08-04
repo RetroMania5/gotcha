@@ -9,6 +9,10 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var SAVE = "gotcha:save";
+  //  Stamped by tools/stamp.py from the source itself. Declared here, not
+  //  beside the update check that uses it, so it is assigned before anything
+  //  can render with it.
+  var BUILD = "f775120326";
 
   var state = Game.fresh();
   var sets = [];
@@ -196,6 +200,13 @@
     c.className = "cell";
     c.innerHTML = '<div class="grow">' + rows + '</div>';
     obox.appendChild(c);
+
+    // Which build this phone is actually running. Without it, "is it updated?"
+    // has no answer you can check from the sofa.
+    var v = document.createElement("div");
+    v.className = "cell build-line";
+    v.innerHTML = '<div class="grow"><small>Build ' + esc(BUILD) + '</small></div>';
+    obox.appendChild(v);
   }
 
   function cell(art, html, btn) {
@@ -1072,22 +1083,91 @@
   //  guarded because a page opened from a file:// URL has no worker at all.
   if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").then(function (reg) {
-        reg.addEventListener("updatefound", function () {
-          var sw = reg.installing;
-          if (!sw) return;
-          sw.addEventListener("statechange", function () {
-            // Say so rather than reloading, which would yank the screen away
-            // from whatever is happening. It is already live on next launch.
-            if (sw.state === "installed" && navigator.serviceWorker.controller) {
-              var n = $("navTitle");
-              if (n) n.textContent = TITLES[tab] + " · updated";
-            }
+      // updateViaCache "none" so the browser cannot hand back a stale sw.js
+      // from its HTTP cache — which, with max-age=600 on everything, is
+      // precisely what it was doing.
+      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+        .then(function (reg) {
+          reg.addEventListener("updatefound", function () {
+            var sw = reg.installing;
+            if (!sw) return;
+            sw.addEventListener("statechange", function () {
+              // Say so rather than reloading, which would yank the screen away
+              // from whatever is happening. It is already live on next launch.
+              if (sw.state === "installed" && navigator.serviceWorker.controller) {
+                var n = $("navTitle");
+                if (n) n.textContent = TITLES[tab] + " · updated";
+              }
+            });
           });
-        });
-      }).catch(function () { /* not fatal — the game runs without it */ });
+        }).catch(function () { /* not fatal — the game runs without it */ });
     });
   }
+
+  //  Checking for a new build, the only way that actually works on a phone.
+  //
+  //  A home-screen app can sit on old code indefinitely: the worker, the
+  //  document and the scripts all have their own caches, and none of them is
+  //  obliged to ask the network. So instead of hoping, the app asks a tiny
+  //  file — no-store, so the answer is always real — and compares it with the
+  //  build it is running. If they differ it clears its caches and reloads
+  //  through a fresh URL, which is the one thing the HTTP cache cannot serve
+  //  from memory.
+  //
+  //  localStorage is untouched by any of this, so a collection survives.
+
+  function reloadFresh(build) {
+    // Guarded, because "reload to update" that never succeeds is an infinite
+    // loop. Two goes, then it gives up and says so rather than spinning.
+    var tries = 0;
+    try { tries = parseInt(sessionStorage.getItem("gotcha:upd:" + build) || "0", 10) || 0; }
+    catch (e) {}
+    if (tries >= 2) {
+      var n = $("navTitle");
+      if (n) n.textContent = "Update — force quit & reopen";
+      return;
+    }
+    try { sessionStorage.setItem("gotcha:upd:" + build, String(tries + 1)); } catch (e) {}
+
+    var go = function () {
+      // A query the browser has not seen defeats the document cache; the
+      // stamped ?v= on each script tag then defeats the script caches.
+      location.replace(location.pathname + "?u=" + encodeURIComponent(build));
+    };
+    if (window.caches && caches.keys) {
+      caches.keys().then(function (keys) {
+        return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+      }).then(go, go);
+    } else { go(); }
+  }
+
+  function checkForUpdate() {
+    if (location.protocol.indexOf("http") !== 0 || !window.fetch) return;
+    fetch("version.json", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (v) {
+        if (!v || !v.build) return;
+        if (v.build === BUILD) {
+          // Running the current build, so clear the retry counters.
+          try {
+            for (var i = sessionStorage.length - 1; i >= 0; i--) {
+              var k = sessionStorage.key(i);
+              if (k && k.indexOf("gotcha:upd:") === 0) sessionStorage.removeItem(k);
+            }
+          } catch (e) {}
+          return;
+        }
+        reloadFresh(v.build);
+      })
+      .catch(function () { /* offline — keep playing */ });
+  }
+
+  checkForUpdate();
+  // Phones do not reload; they resume. Without this, an app left open for a
+  // week never asks again.
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) checkForUpdate();
+  });
 
   // ── start ──────────────────────────────────────────────────────────────
   recall();

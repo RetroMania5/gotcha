@@ -1,0 +1,80 @@
+// The update path, driven directly. This is the logic that decides whether a
+// phone reloads itself, so it has to be exercised rather than assumed —
+// getting it wrong means either never updating or reloading for ever.
+ObjC.import("Foundation");
+function read(p){return ObjC.unwrap($.NSString.stringWithContentsOfFileEncodingError(p,$.NSUTF8StringEncoding,null));}
+var D="/Users/zander/Desktop/repo/gotcha/";
+var out=[], pass=0, fail=0;
+function ok(n,c,note){ if(c){pass++;out.push("PASS  "+n+(note?"  ["+note+"]":""));}
+                       else {fail++;out.push("FAIL  "+n+(note?"  ["+note+"]":""));} }
+
+// ── the stamp is real and self-consistent ────────────────────────────────
+var vjson = JSON.parse(read(D+"version.json"));
+var appjs = read(D+"js/app.js");
+var swjs  = read(D+"sw.js");
+var html  = read(D+"index.html");
+
+var inApp = /var BUILD = "([^"]+)"/.exec(appjs);
+ok("app.js carries a build id", !!inApp && inApp[1].length >= 6, inApp && inApp[1]);
+ok("version.json agrees with it", vjson.build === inApp[1], vjson.build);
+ok("the worker's cache name carries it too",
+   swjs.indexOf('var VERSION = "gotcha-' + inApp[1] + '"') >= 0);
+
+// Every script and stylesheet must be stamped, or new HTML loads old code.
+var tags = html.match(/(?:src|href)="(?:js|css|assets)\/[^"]+"/g) || [];
+var unstamped = tags.filter(function(t){ return t.indexOf("?v=" + inApp[1]) < 0; });
+ok("every script and stylesheet is stamped", unstamped.length === 0,
+   unstamped.length ? unstamped.join(" ") : tags.length + " tags");
+
+// ── the worker must not go through the HTTP cache ────────────────────────
+// GitHub Pages sends max-age=600 on everything, so a plain fetch() inside the
+// worker can be answered without ever touching the network.
+ok("the worker fetches code with no-store",
+   /fetch\(req,\s*\{\s*cache:\s*"no-store"\s*\}\)/.test(swjs));
+ok("and images stay cache-first (their names never change)",
+   swjs.indexOf("caches.match(req).then") >= 0);
+ok("the registration refuses a cached sw.js",
+   /updateViaCache:\s*"none"/.test(appjs));
+
+// ── the loop guard ───────────────────────────────────────────────────────
+// Extract reloadFresh and run it against fakes. A reload-to-update that never
+// succeeds must stop, not spin.
+var store = {}, reloads = [], titled = [];
+var sessionStorage = {
+  getItem:function(k){ return k in store ? store[k] : null; },
+  setItem:function(k,v){ store[k]=String(v); },
+  removeItem:function(k){ delete store[k]; },
+  key:function(i){ return Object.keys(store)[i]; },
+  get length(){ return Object.keys(store).length; }
+};
+var location = { protocol:"https:", pathname:"/gotcha/index.html",
+                 replace:function(u){ reloads.push(u); } };
+var window = { caches:null };
+// NOT named $ — in JXA that global is the ObjC bridge and is not writable,
+// so a stub called $ is silently ignored and the real bridge gets called.
+var byId = function (id) { return { set textContent(v){ titled.push(v); } }; };
+var TITLES = { play:"Play" }, tab = "play";
+
+var src = /function reloadFresh\([\s\S]*?\n  \}\n/.exec(appjs)[0].replace(/\$\(/g, "byId(");
+eval(src);
+
+reloadFresh("newbuild");
+ok("a new build triggers a reload", reloads.length === 1);
+ok("through a URL the cache has not seen",
+   reloads[0].indexOf("?u=newbuild") > 0, reloads[0]);
+reloadFresh("newbuild");
+ok("a second attempt is still allowed", reloads.length === 2);
+reloadFresh("newbuild");
+ok("a third is refused rather than looping", reloads.length === 2);
+ok("and it says what to do instead",
+   titled.length === 1 && /force quit/i.test(titled[0]),
+   "n=" + titled.length + " first=" + JSON.stringify(titled[0]));
+
+// A DIFFERENT build gets its own budget — one bad build must not permanently
+// block every future one.
+reloadFresh("laterbuild");
+ok("a later build is not blocked by the stuck one", reloads.length === 3);
+
+out.push("");
+out.push("═══  " + pass + " passed, " + fail + " failed  ═══");
+out.join("\n");
