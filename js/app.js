@@ -12,7 +12,7 @@
   //  Stamped by tools/stamp.py from the source itself. Declared here, not
   //  beside the update check that uses it, so it is assigned before anything
   //  can render with it.
-  var BUILD = "8714445bcc";
+  var BUILD = "84dbdbc854";
 
   var state = Game.fresh();
   var sets = [];
@@ -198,14 +198,28 @@
     $("petBack").classList.add("show");
   }
 
+  // ── gumballs ───────────────────────────────────────────────────────────
+  function renderGumballs() {
+    var wrap = $("gumWrap");
+    if (!wrap) return;
+    // Shown once the machines are found, and stays shown even at zero — a
+    // counter that vanishes when empty makes the currency look like a bug.
+    wrap.classList.toggle("hidden", !state.discovered);
+    $("gumCount").textContent = (state.gumballs | 0).toLocaleString();
+  }
+
   function renderCoins() {
     $("coinCount").textContent = state.coins.toLocaleString();
     $("rateLine").textContent = Game.coinsPerPipe(state) + " coins a pipe";
+    renderGumballs();
   }
 
   // ── the shop ───────────────────────────────────────────────────────────
   function renderShop() {
     stopCyclers();
+    // The shop is where gumballs get spent, so the counter has to be current
+    // when you arrive rather than only after a coin total changes.
+    renderGumballs();
     var cost = Game.upgradeCost(state.upgrades);
     var can = state.coins >= cost;
     var need = Game.pipesToAfford(state);
@@ -301,6 +315,45 @@
         buys
       ));
     });
+
+    // ── the new machines ─────────────────────────────────────────────
+    var gumSets = Game.gumballSets(sets);
+    var gumGroup = $("gumGroup");
+    if (gumGroup) {
+      gumGroup.classList.toggle("hidden", !state.discovered || !gumSets.length);
+    }
+    if (state.discovered && gumSets.length) {
+      var gsrc = $("gumSource");
+      gsrc.innerHTML = "";
+      var canGum = state.coins >= Game.GUMBALL_COST;
+      gsrc.appendChild(cell(
+        pill("●", "linear-gradient(to bottom,#63b8ff,#1d6fd0)"),
+        "<b>Gumball machine</b><small>" + Game.GUMBALL_COST.toLocaleString() +
+          " coins for " + Game.GUMBALL_MIN + "–" + Game.GUMBALL_MAX +
+          " gumballs. Never blanks.</small>",
+        button(Game.GUMBALL_COST.toLocaleString(), canGum ? "gold" : "grey", !canGum, function () {
+          spinGumballs();
+        })
+      ));
+
+      var gbox = $("gumMachines");
+      gbox.innerHTML = "";
+      gumSets.forEach(function (set, gi) {
+        var price = Game.gumballSetCost(gi);
+        var prog = Game.setProgress(state, set);
+        var afford = (state.gumballs | 0) >= price;
+        gbox.appendChild(cell(
+          machinePreview(set),
+          "<b>" + esc(set.name) + "</b><small>" + esc(set.blurb) + " · " +
+            prog.have + " of " + prog.of +
+            (prog.complete ? " — complete" : "") + "</small>",
+          button("● " + price.toLocaleString(), afford ? "gum" : "grey", !afford, function (e) {
+            var row = e.currentTarget.closest(".cell");
+            doGumPull(set, gi, row && row.querySelector(".machine-art"));
+          })
+        ));
+      });
+    }
 
     // Odds are derived from the real weights, so what is shown here cannot
     // drift from what the machine actually does.
@@ -444,6 +497,126 @@
       stage.innerHTML = "";
       if (screen) screen.classList.remove("busy");
       renderShop();
+    });
+  }
+
+  //  The gumball machine. A globe of gumballs, a crank, and then they come
+  //  out one at a time and fly to the counter — each one landing bumps the
+  //  number by one, so the count you end up with is watched rather than
+  //  simply announced. That is the whole reason it is an animation.
+  var gumSpinning = false;
+  var GUM_BEATS = { hide: 0, rise: 200, turn: 620, first: 1150, step: 260, tail: 900 };
+
+  function spinGumballs() {
+    if (busy() || gumSpinning) return;
+    var r = Game.buyGumballs(state, Math.random);
+    if (!r.ok) { Sfx.play("nope"); return; }
+    store();
+    renderCoins();
+    playGumballs(r);
+  }
+
+  function playGumballs(r) {
+    clearSequence();
+    gumSpinning = true;
+    var total = GUM_BEATS.first + r.got * GUM_BEATS.step + GUM_BEATS.tail;
+    beginSequence(total);
+
+    var stage = $("capsuleStage");
+    stage.innerHTML = "";
+    stage.classList.add("show");
+    var screen = $("screen" + cap(tab));
+    if (screen) screen.classList.add("busy");
+    at(GUM_BEATS.hide + 60, function () { stage.classList.add("dim"); });
+
+    var m = document.createElement("div");
+    m.className = "gummachine";
+    m.innerHTML =
+      '<div class="gum-globe"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>' +
+      '<div class="gum-body"><div class="gum-knob"></div><div class="gum-chute"></div></div>';
+    stage.appendChild(m);
+
+    // The counter it feeds, shown big while this is happening.
+    var tally = document.createElement("div");
+    tally.className = "gum-tally";
+    tally.innerHTML = '<span class="g">●</span><span id="gumTally">' +
+                      ((state.gumballs | 0) - r.got) + '</span>';
+    stage.appendChild(tally);
+
+    at(GUM_BEATS.rise, function () { m.classList.add("up"); });
+    at(GUM_BEATS.turn, function () { m.classList.add("turn"); Sfx.play("crank"); });
+
+    var shown = (state.gumballs | 0) - r.got;
+    for (var i = 0; i < r.got; i++) {
+      (function (k) {
+        at(GUM_BEATS.first + k * GUM_BEATS.step, function () {
+          var ch = m.querySelector(".gum-chute").getBoundingClientRect();
+          var b = document.createElement("div");
+          b.className = "gumball";
+          // Each one a slightly different blue, or ten identical dots read as
+          // one dot flickering.
+          b.style.setProperty("--gc", ["#63b8ff", "#3f9ae8", "#7fc9ff", "#2e86d6"][k % 4]);
+          b.style.left = (ch.left + ch.width / 2) + "px";
+          b.style.top = (ch.top + ch.height / 2) + "px";
+          stage.appendChild(b);
+          Sfx.play("drop");
+
+          var t = tally.getBoundingClientRect();
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              b.style.left = (t.left + t.width / 2) + "px";
+              b.style.top = (t.top + t.height / 2) + "px";
+              b.classList.add("flying");
+            });
+          });
+
+          // It lands, the counter ticks, and the number takes the knock.
+          pullTimers.push(setTimeout(function () {
+            shown++;
+            var el = $("gumTally");
+            if (el) {
+              el.textContent = shown;
+              el.classList.remove("bump");
+              void el.offsetWidth;              // restart the animation
+              el.classList.add("bump");
+            }
+            Sfx.play("bloop");
+            if (b.parentNode) b.parentNode.removeChild(b);
+          }, 420));
+        });
+      })(i);
+    }
+
+    at(GUM_BEATS.first + r.got * GUM_BEATS.step + GUM_BEATS.tail - 250, function () {
+      m.classList.add("away");
+    });
+
+    pullTimers.push(setTimeout(function () {
+      if (gumSpinning) { gumSpinning = false; clearSequence(); renderShop(); renderCoins(); }
+    }, total + 2500));
+
+    at(total, function () {
+      gumSpinning = false;
+      stage.classList.remove("show", "dim");
+      stage.innerHTML = "";
+      if (screen) screen.classList.remove("busy");
+      renderCoins();
+      renderShop();
+    });
+  }
+
+  //  A pull from one of the new machines. Same capsule sequence as the coin
+  //  machines — it is the same act, only the currency differs.
+  function doGumPull(set, gi, fromEl) {
+    if (busy() || gumSpinning) return;
+    var r = Game.buyGumballPull(state, set, gi, Math.random);
+    if (!r.ok) { Sfx.play("nope"); return; }
+    lastPull = null;                 // "Again" would spend coins on a gumball set
+    store();
+    renderCoins();
+    playCapsule(set, r, fromEl, function () {
+      pulling = false;
+      showResult(set, -1, r);
     });
   }
 
@@ -970,10 +1143,17 @@
       : "New!";
     $("pullModal").className = "modal " + r.card.rarity;
 
-    var price = Game.setCost(index);
     var again = $("pullAgain");
-    again.textContent = "Again · " + price;
-    again.disabled = state.coins < price;
+    if (index < 0) {
+      // A gumball machine. There is no coin price to offer, and "Again" would
+      // silently charge the wrong currency.
+      again.style.display = "none";
+    } else {
+      var price = Game.setCost(index);
+      again.style.display = "";
+      again.textContent = "Again · " + price;
+      again.disabled = state.coins < price;
+    }
 
     Sfx.play("swoosh");
     $("pullBack").classList.add("show");
@@ -1026,6 +1206,25 @@
     return true;
   }
 
+  //  The new machines turning up. Checked here AND on load: somebody who
+  //  finished the collection before these machines existed has completed set
+  //  already, so the celebration will never fire for them again — without
+  //  this they would never be told the machines exist.
+  function maybeDiscover() {
+    if (!Game.checkDiscovery(state, sets)) return false;
+    store();
+    $("discBack").classList.add("show");
+    Sfx.play("reveal", "veryrare");
+    renderGumballs();
+    return true;
+  }
+
+  $("discDone").onclick = function () {
+    Sfx.play("tock");
+    $("discBack").classList.remove("show");
+    show("shop");
+  };
+
   function showCompleted() {
     doneStage = 0;
     $("doneTitle").textContent = "COMPLETED!!";
@@ -1075,6 +1274,8 @@
     $("confetti").classList.remove("on");
     $("confetti").innerHTML = "";
     renderGoldRow();
+    // The machines appear straight after the celebration that unlocked them.
+    if (maybeDiscover()) return;
     if (tab === "shop") renderShop();
     if (tab === "bag") renderBag();
   };
@@ -1103,6 +1304,7 @@
     // Checked as the reveal closes rather than as the card lands, so the
     // celebration does not appear behind the card that caused it.
     if (maybeCelebrate()) return;
+    if (maybeDiscover()) return;
     if (tab === "shop") renderShop();
     if (tab === "bag") renderBag();
   }
@@ -1572,6 +1774,10 @@
   prepareRun();
   show("play");
   if (!sets.length) $("navTitle").textContent = "Play (no sets)";
+  renderGumballs();
+  // Anyone who already finished the collection is told now, on the first
+  // launch after these machines were added.
+  maybeDiscover();
 
   // Exposed for testing.
   window.__gotcha = {
@@ -1582,6 +1788,8 @@
     renderPetSlot: renderPetSlot, openPetPicker: openPetPicker, applyPet: applyPet,
     renderPetOpacity: renderPetOpacity, renderGoldRow: renderGoldRow,
     maybeCelebrate: maybeCelebrate, applyGold: applyGold,
+    maybeDiscover: maybeDiscover, renderGumballs: renderGumballs,
+    spinGumballs: spinGumballs, doGumPull: doGumPull,
     game_gold_probe: function () { return game ? game._internals.gold() : null; },
     get petOpacity() { return petOpacity; },
     // What the GAME is actually carrying, not what the save says.

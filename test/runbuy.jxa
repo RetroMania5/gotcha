@@ -58,7 +58,9 @@ var byId={};
  "petSlot","petBack","petModal","petGrid","petNone","petClose",
  "setBtn","setBack","setModal","setClose","petOpacity","petOpacityNote",
  "doneBack","doneModal","doneTitle","doneBody","doneNext","confetti",
- "goldRow","goldBtn","goldNote"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
+ "goldRow","goldBtn","goldNote",
+ "gumWrap","gumCount","gumGroup","gumSource","gumMachines",
+ "discBack","discModal","discBody","discDone","gumTally"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
 byId.dBest.parent = El();
 // The game needs a canvas; a stub context is enough since nothing is drawn.
 byId.game.getContext = function(){ return new Proxy({}, { get: function(){
@@ -771,6 +773,97 @@ if (err) { err; } else {
            (reloaded2.goldOn === true && reloaded2.goldSkin === true));
   G.prepareRun();
   out.push("  and the next run is still gold: " + G.game_gold_probe());
+
+
+  // ── the new machines ─────────────────────────────────────────────────
+  out.push("");
+  var baseSets = Game.baseSets(G.sets), gumSets = Game.gumballSets(G.sets);
+  out.push("machines: " + baseSets.length + " coin, " + gumSets.length + " gumball");
+  out.push("  cards: " + Game.totals(G.state, baseSets).of + " original, " +
+           Game.totals(G.state, gumSets).of + " new");
+
+  // Hidden until found.
+  G.state.owned = {}; G.state.discovered = false; G.state.gumballs = 0;
+  G.state.completed = false;
+  G.show("shop");
+  out.push("the new group is hidden to begin with: " +
+           (document.getElementById("gumGroup").className.indexOf("hidden") >= 0));
+  out.push("  and so is the gumball counter: " +
+           (document.getElementById("gumWrap").className.indexOf("hidden") >= 0));
+
+  // THE RETURNING PLAYER: already has all 120 and already "completed", but has
+  // never seen the gumball machines. This is the case that needs the check on
+  // load rather than only at the moment of completion.
+  baseSets.forEach(function (st) { st.cards.forEach(function (c) { G.state.owned[c.id] = 1; }); });
+  G.state.completed = true;          // they finished it before this update
+  G.state.goldSkin = true;
+  G.state.discovered = false;
+  out.push("a returning player with all " + Game.totals(G.state, baseSets).of + ":");
+  out.push("  the celebration stays quiet: " + (G.maybeCelebrate() === false));
+  out.push("  but the discovery fires: " + (G.maybeDiscover() === true));
+  out.push("  and the warning is on screen: " +
+           (document.getElementById("discBack").className.indexOf("show") >= 0));
+  document.getElementById("discDone").onclick();
+  out.push("  it only fires once: " + (G.maybeDiscover() === false));
+  out.push("  the counter is now visible: " +
+           (document.getElementById("gumWrap").className.indexOf("hidden") < 0));
+  G.renderShop();
+  out.push("  and the new machines are listed: " +
+           document.getElementById("gumMachines").children.length);
+
+  // Buying gumballs.
+  G.state.coins = 5000;
+  G.renderShop();
+  var gsrcBtn = (function () {
+    var c = document.getElementById("gumSource").children[0];
+    return c.children[c.children.length - 1];
+  })();
+  out.push("gumball machine price: " + gsrcBtn.textContent);
+  var coinsBefore = G.state.coins, gumsBefore = G.state.gumballs;
+  gsrcBtn.onclick();
+  out.push("the machine took the screen: " +
+           (document.getElementById("capsuleStage").className.indexOf("show") >= 0));
+  __flush();
+  out.push("  coins " + coinsBefore + " -> " + G.state.coins +
+           ((coinsBefore - G.state.coins) === Game.GUMBALL_COST ? "  (1000)" : "  (WRONG)"));
+  var got = G.state.gumballs - gumsBefore;
+  out.push("  gumballs gained: " + got +
+           (got >= Game.GUMBALL_MIN && got <= Game.GUMBALL_MAX ? "  (1-10)" : "  (OUT OF RANGE)"));
+  out.push("  and it let the screen go: " +
+           (document.getElementById("capsuleStage").className.indexOf("show") < 0));
+
+  // Buying a new machine costs gumballs, not coins.
+  G.state.gumballs = 500;
+  G.renderShop();
+  var gmRow = document.getElementById("gumMachines").children[0];
+  var gmBtn = gmRow.children[gmRow.children.length - 1];
+  out.push("first new machine price: " + gmBtn.textContent +
+           (gmBtn.textContent.indexOf("25") >= 0 ? "  (25 gumballs)" : "  (WRONG)"));
+  var coinsWere = G.state.coins, gumsWere = G.state.gumballs;
+  var ownedWere = Object.keys(G.state.owned).reduce(function (t,k) { return t + G.state.owned[k]; }, 0);
+  gmBtn.onclick({ currentTarget: gmBtn });
+  __flush();
+  document.getElementById("pullDone").onclick();
+  out.push("  gumballs " + gumsWere + " -> " + G.state.gumballs +
+           ((gumsWere - G.state.gumballs) === 25 ? "  (25 spent)" : "  (WRONG)"));
+  out.push("  coins untouched: " + (G.state.coins === coinsWere));
+  var ownedNow = Object.keys(G.state.owned).reduce(function (t,k) { return t + G.state.owned[k]; }, 0);
+  out.push("  a card was won: " + (ownedNow === ownedWere + 1));
+
+  // The second new machine costs more.
+  G.renderShop();
+  var gm2 = document.getElementById("gumMachines").children[1];
+  out.push("second new machine price: " + gm2.children[gm2.children.length - 1].textContent);
+
+  // Too few gumballs: refused, nothing taken.
+  G.state.gumballs = 1;
+  G.renderShop();
+  var poorRow = document.getElementById("gumMachines").children[0];
+  var poorBtn = poorRow.children[poorRow.children.length - 1];
+  poorBtn.onclick({ currentTarget: poorBtn });
+  __flush();
+  out.push("one gumball short: still have " + G.state.gumballs + ", no reveal: " +
+           (document.getElementById("pullBack").className.indexOf("show") < 0));
 
   out.join("\n");
 }

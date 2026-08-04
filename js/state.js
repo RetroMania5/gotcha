@@ -193,6 +193,58 @@ var Game = (function () {
     return 25 * (Math.max(0, index | 0) + 1);
   }
 
+  // ── gumballs ───────────────────────────────────────────────────────────
+  //  A second currency, for the machines that appear once the first
+  //  collection is finished. Coins buy gumballs; gumballs buy the new
+  //  machines. Keeping them separate is the point — the new machines are not
+  //  meant to be reachable by grinding coins alone at the old rate.
+  var GUMBALL_COST = 1000;      // coins for one turn of the gumball machine
+  var GUMBALL_MIN = 1;
+  var GUMBALL_MAX = 10;
+  var GUMBALL_SET_COST = 25;    // the first new machine; each one after adds this again
+
+  //  The original machines are bought with coins; the new ones with gumballs.
+  //  Told apart by a flag on the set rather than by counting, so a set can be
+  //  added to either group without renumbering anything.
+  function isGumballSet(set) { return !!(set && set.gumball); }
+  function baseSets(sets) { return sets.filter(function (s) { return !isGumballSet(s); }); }
+  function gumballSets(sets) { return sets.filter(isGumballSet); }
+
+  //  Priced by position among the GUMBALL machines, so the first is 25
+  //  whatever number it happens to be in the full list.
+  function gumballSetCost(indexAmongGumball) {
+    return GUMBALL_SET_COST * (Math.max(0, indexAmongGumball | 0) + 1);
+  }
+
+  //  One turn of the machine. Never blank: a thousand coins is a real amount
+  //  to hand over, and a machine that can take it and give nothing back would
+  //  just read as broken.
+  function buyGumballs(state, rng) {
+    if (state.coins < GUMBALL_COST) {
+      return { ok: false, reason: 'coins', cost: GUMBALL_COST };
+    }
+    rng = rng || Math.random;
+    var n = GUMBALL_MIN + Math.floor(rng() * (GUMBALL_MAX - GUMBALL_MIN + 1));
+    if (n > GUMBALL_MAX) n = GUMBALL_MAX;      // a rng returning exactly 1
+    state.coins -= GUMBALL_COST;
+    state.gumballs = (state.gumballs | 0) + n;
+    return { ok: true, got: n, cost: GUMBALL_COST, total: state.gumballs };
+  }
+
+  function buyGumballPull(state, set, indexAmongGumball, rng) {
+    var cost = gumballSetCost(indexAmongGumball);
+    if ((state.gumballs | 0) < cost) {
+      return { ok: false, reason: 'gumballs', cost: cost };
+    }
+    var card = pull(set.cards, rng);
+    if (!card) return { ok: false, reason: 'empty' };
+    state.gumballs -= cost;
+    state.pulls += 1;
+    var had = state.owned[card.id] || 0;
+    state.owned[card.id] = had + 1;
+    return { ok: true, cost: cost, card: card, duplicate: had > 0, count: had + 1 };
+  }
+
   // ── items ──────────────────────────────────────────────────────────────
   //  One-use, bought from a slot machine and spent on a single run. Armed
   //  before you start and consumed when you do — arming is deliberately not
@@ -313,7 +365,9 @@ var Game = (function () {
       wheelGranted: true,
       completed: false,    // has the collection ever been finished
       goldSkin: false,     // unlocked by finishing it
-      goldOn: false
+      goldOn: false,
+      gumballs: 0,         // the second currency
+      discovered: false
     };
   }
 
@@ -351,6 +405,11 @@ var Game = (function () {
     s.completed = !!d.completed;
     s.goldSkin = !!d.goldSkin || !!d.completed;
     s.goldOn = !!d.goldOn && s.goldSkin;
+    s.gumballs = num(d.gumballs);
+    // NOT inferred from `completed`. A save that finished the collection
+    // before these machines existed must still be shown the discovery, which
+    // is exactly the case checkDiscovery is there to catch.
+    s.discovered = !!d.discovered;
 
     // The wheel. A save written before it existed has no `wheelGranted`, and
     // that is exactly who should get the free spin — everybody already
@@ -509,8 +568,12 @@ var Game = (function () {
   //  nothing about how the game plays — the collection is the achievement,
   //  and paying it out in power would make the last cards a grind rather
   //  than a finish line.
+  //  "Complete" means every card in the ORIGINAL machines, not every card in
+  //  the game. The new machines only exist because you finished the first
+  //  collection, so counting them here would make finishing impossible —
+  //  you would need cards from machines you cannot reach yet.
   function isComplete(state, sets) {
-    var t = totals(state, sets);
+    var t = totals(state, baseSets(sets));
     return t.of > 0 && t.have === t.of;
   }
 
@@ -522,6 +585,20 @@ var Game = (function () {
     if (!isComplete(state, sets)) return false;
     state.completed = true;
     state.goldSkin = true;      // unlocked, not yet equipped
+    state.discovered = false;   // shown next; see checkDiscovery
+    return true;
+  }
+
+  //  The new machines appearing. Separate from checkComplete on purpose:
+  //  somebody who finished the collection BEFORE these machines existed has
+  //  completed === true already, and would otherwise never be told. This is
+  //  checked on load as well as after a pull, so they see it the moment they
+  //  next open the game.
+  function checkDiscovery(state, sets) {
+    if (state.discovered) return false;
+    if (!gumballSets(sets).length) return false;   // nothing to discover
+    if (!isComplete(state, sets)) return false;
+    state.discovered = true;
     return true;
   }
 
@@ -553,6 +630,11 @@ var Game = (function () {
     perPipe: perPipe, upgradeCost: upgradeCost, pipesToAfford: pipesToAfford,
     coinsPerPipe: coinsPerPipe, flatUpgrades: flatUpgrades, wheelMult: wheelMult,
     isComplete: isComplete, checkComplete: checkComplete,
+    checkDiscovery: checkDiscovery,
+    GUMBALL_COST: GUMBALL_COST, GUMBALL_MIN: GUMBALL_MIN, GUMBALL_MAX: GUMBALL_MAX,
+    isGumballSet: isGumballSet, baseSets: baseSets, gumballSets: gumballSets,
+    gumballSetCost: gumballSetCost, buyGumballs: buyGumballs,
+    buyGumballPull: buyGumballPull,
     WHEEL: WHEEL, WHEEL_EVERY: WHEEL_EVERY,
     isWheelNext: isWheelNext, wheelProgress: wheelProgress,
     tierOdds: tierOdds, pull: pull, setCost: setCost,

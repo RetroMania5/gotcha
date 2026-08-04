@@ -83,7 +83,8 @@ window.GOTCHA_SETS = [
     "rarity": "common",
     "id": "sunburst_14"
    }
-  ]
+  ],
+  "gumball": false
  },
  {
   "id": "honeycomb",
@@ -167,7 +168,8 @@ window.GOTCHA_SETS = [
     "rarity": "common",
     "id": "honeycomb_14"
    }
-  ]
+  ],
+  "gumball": false
  },
  {
   "id": "thicket",
@@ -251,7 +253,8 @@ window.GOTCHA_SETS = [
     "rarity": "common",
     "id": "thicket_14"
    }
-  ]
+  ],
+  "gumball": false
  },
  {
   "id": "tidewater",
@@ -335,7 +338,8 @@ window.GOTCHA_SETS = [
     "rarity": "common",
     "id": "tidewater_14"
    }
-  ]
+  ],
+  "gumball": false
  },
  {
   "id": "nightfall",
@@ -419,7 +423,8 @@ window.GOTCHA_SETS = [
     "rarity": "common",
     "id": "nightfall_14"
    }
-  ]
+  ],
+  "gumball": false
  },
  {
   "id": "driftwood",
@@ -503,7 +508,8 @@ window.GOTCHA_SETS = [
     "rarity": "common",
     "id": "driftwood_14"
    }
-  ]
+  ],
+  "gumball": false
  },
  {
   "id": "emberfall",
@@ -587,7 +593,8 @@ window.GOTCHA_SETS = [
     "rarity": "common",
     "id": "emberfall_14"
    }
-  ]
+  ],
+  "gumball": false
  },
  {
   "id": "moonglass",
@@ -671,6 +678,432 @@ window.GOTCHA_SETS = [
     "rarity": "common",
     "id": "moonglass_14"
    }
-  ]
+  ],
+  "gumball": false
+ },
+ {
+  "id": "cinderpeak",
+  "name": "Cinderpeak",
+  "blurb": "Warm and smouldering",
+  "hex": "#c0392b",
+  "lo": "#7b1d13",
+  "cards": [
+   {
+    "file": "cinderpeak/00.png",
+    "rarity": "legendary",
+    "id": "cinderpeak_00"
+   },
+   {
+    "file": "cinderpeak/01.png",
+    "rarity": "veryrare",
+    "id": "cinderpeak_01"
+   },
+   {
+    "file": "cinderpeak/02.png",
+    "rarity": "rare",
+    "id": "cinderpeak_02"
+   },
+   {
+    "file": "cinderpeak/03.png",
+    "rarity": "rare",
+    "id": "cinderpeak_03"
+   },
+   {
+    "file": "cinderpeak/04.png",
+    "rarity": "rare",
+    "id": "cinderpeak_04"
+   },
+   {
+    "file": "cinderpeak/05.png",
+    "rarity": "common",
+    "id": "cinderpeak_05"
+   },
+   {
+    "file": "cinderpeak/06.png",
+    "rarity": "common",
+    "id": "cinderpeak_06"
+   },
+   {
+    "file": "cinderpeak/07.png",
+    "rarity": "common",
+    "id": "cinderpeak_07"
+   },
+   {
+    "file": "cinderpeak/08.png",
+    "rarity": "common",
+    "id": "cinderpeak_08"
+   },
+   {
+    "file": "cinderpeak/09.png",
+    "rarity": "common",
+    "id": "cinderpeak_09"
+   },
+   {
+    "file": "cinderpeak/10.png",
+    "rarity": "common",
+    "id": "cinderpeak_10"
+   },
+   {
+    "file": "cinderpeak/11.png",
+    "rarity": "common",
+    "id": "cinderpeak_11"
+   },
+   {
+    "file": "cinderpeak/12.png",
+    "rarity": "common",
+    "id": "cinderpeak_12"
+   },
+   {
+    "file": "cinderpeak/13.png",
+    "rarity": "common",
+    "id": "cinderpeak_13"
+   },
+   {
+    "file": "cinderpeak/14.png",
+    "rarity": "common",
+    "id": "cinderpeak_14"
+   }
+  ],
+  "gumball": true
+ },
+ {
+  "id": "goldrush",
+  "name": "Goldrush",
+  "blurb": "Bright and brassy",
+  "hex": "#d4901a",
+  "lo": "#8c5b06",
+  "cards": [
+   {
+    "file": "goldrush/00.png",
+    "rarity": "legendary",
+    "id": "goldrush_00"
+   },
+   {
+    "file": "goldrush/01.png",
+    "rarity": "veryrare",
+    "id": "goldrush_01"
+   },
+   {
+    "file": "goldrush/02.png",
+    "rarity": "rare",
+    "id": "goldrush_02"
+   },
+   {
+    "file": "goldrush/03.png",
+    "rarity": "rare",
+    "id": "goldrush_03"
+   },
+   {
+    "file": "goldrush/04.png",
+    "rarity": "rare",
+    "id": "goldrush_04"
+   },
+   {
+    "file": "goldrush/05.png",
+    "rarity": "common",
+    "id": "goldrush_05"
+   },
+   {
+    "file": "goldrush/06.png",
+    "rarity": "common",
+    "id": "goldrush_06"
+   },
+   {
+    "file": "goldrush/07.png",
+    "rarity": "common",
+    "id": "goldrush_07"
+   },
+   {
+    "file": "goldrush/08.png",
+    "rarity": "common",
+    "id": "goldrush_08"
+   },
+   {
+    "file": "goldrush/09.png",
+    "rarity": "common",
+    "id": "goldrush_09"
+   },
+   {
+    "file": "goldrush/10.png",
+    "rarity": "common",
+    "id": "goldrush_10"
+   },
+   {
+    "file": "goldrush/11.png",
+    "rarity": "common",
+    "id": "goldrush_11"
+   },
+   {
+    "file": "goldrush/12.png",
+    "rarity": "common",
+    "id": "goldrush_12"
+   },
+   {
+    "file": "goldrush/13.png",
+    "rarity": "common",
+    "id": "goldrush_13"
+   },
+   {
+    "file": "goldrush/14.png",
+    "rarity": "common",
+    "id": "goldrush_14"
+   }
+  ],
+  "gumball": true
+ },
+ {
+  "id": "verdigris",
+  "name": "Verdigris",
+  "blurb": "Greens gone old",
+  "hex": "#2e8b6b",
+  "lo": "#175a43",
+  "cards": [
+   {
+    "file": "verdigris/00.png",
+    "rarity": "legendary",
+    "id": "verdigris_00"
+   },
+   {
+    "file": "verdigris/01.png",
+    "rarity": "veryrare",
+    "id": "verdigris_01"
+   },
+   {
+    "file": "verdigris/02.png",
+    "rarity": "rare",
+    "id": "verdigris_02"
+   },
+   {
+    "file": "verdigris/03.png",
+    "rarity": "rare",
+    "id": "verdigris_03"
+   },
+   {
+    "file": "verdigris/04.png",
+    "rarity": "rare",
+    "id": "verdigris_04"
+   },
+   {
+    "file": "verdigris/05.png",
+    "rarity": "common",
+    "id": "verdigris_05"
+   },
+   {
+    "file": "verdigris/06.png",
+    "rarity": "common",
+    "id": "verdigris_06"
+   },
+   {
+    "file": "verdigris/07.png",
+    "rarity": "common",
+    "id": "verdigris_07"
+   },
+   {
+    "file": "verdigris/08.png",
+    "rarity": "common",
+    "id": "verdigris_08"
+   },
+   {
+    "file": "verdigris/09.png",
+    "rarity": "common",
+    "id": "verdigris_09"
+   },
+   {
+    "file": "verdigris/10.png",
+    "rarity": "common",
+    "id": "verdigris_10"
+   },
+   {
+    "file": "verdigris/11.png",
+    "rarity": "common",
+    "id": "verdigris_11"
+   },
+   {
+    "file": "verdigris/12.png",
+    "rarity": "common",
+    "id": "verdigris_12"
+   },
+   {
+    "file": "verdigris/13.png",
+    "rarity": "common",
+    "id": "verdigris_13"
+   },
+   {
+    "file": "verdigris/14.png",
+    "rarity": "common",
+    "id": "verdigris_14"
+   }
+  ],
+  "gumball": true
+ },
+ {
+  "id": "deepdive",
+  "name": "Deepdive",
+  "blurb": "Blues and depths",
+  "hex": "#2472a4",
+  "lo": "#124a6e",
+  "cards": [
+   {
+    "file": "deepdive/00.png",
+    "rarity": "legendary",
+    "id": "deepdive_00"
+   },
+   {
+    "file": "deepdive/01.png",
+    "rarity": "veryrare",
+    "id": "deepdive_01"
+   },
+   {
+    "file": "deepdive/02.png",
+    "rarity": "rare",
+    "id": "deepdive_02"
+   },
+   {
+    "file": "deepdive/03.png",
+    "rarity": "rare",
+    "id": "deepdive_03"
+   },
+   {
+    "file": "deepdive/04.png",
+    "rarity": "rare",
+    "id": "deepdive_04"
+   },
+   {
+    "file": "deepdive/05.png",
+    "rarity": "common",
+    "id": "deepdive_05"
+   },
+   {
+    "file": "deepdive/06.png",
+    "rarity": "common",
+    "id": "deepdive_06"
+   },
+   {
+    "file": "deepdive/07.png",
+    "rarity": "common",
+    "id": "deepdive_07"
+   },
+   {
+    "file": "deepdive/08.png",
+    "rarity": "common",
+    "id": "deepdive_08"
+   },
+   {
+    "file": "deepdive/09.png",
+    "rarity": "common",
+    "id": "deepdive_09"
+   },
+   {
+    "file": "deepdive/10.png",
+    "rarity": "common",
+    "id": "deepdive_10"
+   },
+   {
+    "file": "deepdive/11.png",
+    "rarity": "common",
+    "id": "deepdive_11"
+   },
+   {
+    "file": "deepdive/12.png",
+    "rarity": "common",
+    "id": "deepdive_12"
+   },
+   {
+    "file": "deepdive/13.png",
+    "rarity": "common",
+    "id": "deepdive_13"
+   },
+   {
+    "file": "deepdive/14.png",
+    "rarity": "common",
+    "id": "deepdive_14"
+   }
+  ],
+  "gumball": true
+ },
+ {
+  "id": "violetta",
+  "name": "Violetta",
+  "blurb": "Purples and dusk",
+  "hex": "#7d4fa8",
+  "lo": "#4c2a6b",
+  "cards": [
+   {
+    "file": "violetta/00.png",
+    "rarity": "legendary",
+    "id": "violetta_00"
+   },
+   {
+    "file": "violetta/01.png",
+    "rarity": "veryrare",
+    "id": "violetta_01"
+   },
+   {
+    "file": "violetta/02.png",
+    "rarity": "rare",
+    "id": "violetta_02"
+   },
+   {
+    "file": "violetta/03.png",
+    "rarity": "rare",
+    "id": "violetta_03"
+   },
+   {
+    "file": "violetta/04.png",
+    "rarity": "rare",
+    "id": "violetta_04"
+   },
+   {
+    "file": "violetta/05.png",
+    "rarity": "common",
+    "id": "violetta_05"
+   },
+   {
+    "file": "violetta/06.png",
+    "rarity": "common",
+    "id": "violetta_06"
+   },
+   {
+    "file": "violetta/07.png",
+    "rarity": "common",
+    "id": "violetta_07"
+   },
+   {
+    "file": "violetta/08.png",
+    "rarity": "common",
+    "id": "violetta_08"
+   },
+   {
+    "file": "violetta/09.png",
+    "rarity": "common",
+    "id": "violetta_09"
+   },
+   {
+    "file": "violetta/10.png",
+    "rarity": "common",
+    "id": "violetta_10"
+   },
+   {
+    "file": "violetta/11.png",
+    "rarity": "common",
+    "id": "violetta_11"
+   },
+   {
+    "file": "violetta/12.png",
+    "rarity": "common",
+    "id": "violetta_12"
+   },
+   {
+    "file": "violetta/13.png",
+    "rarity": "common",
+    "id": "violetta_13"
+   },
+   {
+    "file": "violetta/14.png",
+    "rarity": "common",
+    "id": "violetta_14"
+   }
+  ],
+  "gumball": true
  }
 ];

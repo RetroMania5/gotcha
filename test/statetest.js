@@ -792,5 +792,98 @@ Game.sellAllSpares(soldOut, [set, setB]);
 ok('selling every spare keeps it complete',
    Game.isComplete(soldOut, [set, setB]) === true && soldOut.goldSkin === true);
 
+out.push('');
+out.push('── gumballs and the new machines ──');
+function gset(id) { var x = makeSet(id); x.gumball = true; return x; }
+var BASE = [makeSet('a'), makeSet('b')];
+var GUM  = [gset('g1'), gset('g2')];
+var ALL  = BASE.concat(GUM);
+
+ok('the new machines are told apart by a flag',
+   Game.gumballSets(ALL).length === 2 && Game.baseSets(ALL).length === 2);
+
+// Completion counts the ORIGINAL machines only, or unlocking is circular:
+// you would need cards from machines you cannot reach yet.
+var gg = Game.fresh();
+BASE.forEach(function (s) { s.cards.forEach(function (c) { gg.owned[c.id] = 1; }); });
+ok('owning every original card counts as complete', Game.isComplete(gg, ALL) === true,
+   Game.totals(gg, ALL).have + ' of ' + Game.totals(gg, ALL).of + ' overall');
+ok('  even though the new machines are untouched',
+   Game.totals(gg, ALL).have < Game.totals(gg, ALL).of);
+
+// Discovery.
+var d1 = Game.fresh();
+ok('nothing is discovered before the collection is done',
+   Game.checkDiscovery(d1, ALL) === false);
+BASE.forEach(function (s) { s.cards.forEach(function (c) { d1.owned[c.id] = 1; }); });
+ok('finishing it discovers the new machines', Game.checkDiscovery(d1, ALL) === true);
+ok('and it is remembered', d1.discovered === true);
+ok('so it is only announced once', Game.checkDiscovery(d1, ALL) === false);
+ok('with nothing to discover, nothing happens',
+   Game.checkDiscovery(Game.fresh(), BASE) === false);
+
+// The case that matters most: somebody who finished the collection BEFORE
+// these machines existed. Their save says completed, so checkComplete will
+// never fire again — discovery has to be its own check.
+var old = Game.load(JSON.stringify({
+  coins: 0, upgrades: 0, items: {}, armed: {}, owned: (function () {
+    var o = {}; BASE.forEach(function (s) { s.cards.forEach(function (c) { o[c.id] = 1; }); }); return o;
+  })(), completed: true, goldSkin: true,
+}));
+ok('an old completed save is not marked discovered on load', old.discovered === false);
+ok('  checkComplete stays silent for them', Game.checkComplete(old, ALL) === false,
+   'they completed it long ago');
+ok('  but discovery still fires', Game.checkDiscovery(old, ALL) === true,
+   'this is the whole reason it is a separate check');
+ok('  and then stays quiet', Game.checkDiscovery(old, ALL) === false);
+ok('  which survives a save', Game.load(Game.save(old)).discovered === true);
+
+// Buying gumballs.
+out.push('');
+var gb = Game.fresh();
+ok('a turn of the machine costs 1000', Game.GUMBALL_COST === 1000);
+ok('you cannot buy without the coins',
+   Game.buyGumballs(gb, function () { return 0.5; }).ok === false);
+ok('and nothing is taken', gb.coins === 0 && gb.gumballs === 0);
+gb.coins = 1000;
+var got = Game.buyGumballs(gb, function () { return 0; });
+ok('with the coins it goes through', got.ok === true);
+ok('the coins are taken', gb.coins === 0);
+ok('the lowest roll still gives one', got.got === 1, String(got.got));
+gb.coins = 1000;
+ok('the highest gives ten',
+   Game.buyGumballs(gb, function () { return 0.999999; }).got === 10);
+ok('and they add up', gb.gumballs === 11, String(gb.gumballs));
+ok('it never blanks', (function () {
+  var seed = 31337, seen = {};
+  function rng() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+  var st = Game.fresh(); st.coins = 1000 * 5000;
+  for (var i = 0; i < 5000; i++) { var r = Game.buyGumballs(st, rng); seen[r.got] = 1;
+    if (r.got < 1 || r.got > 10 || r.got % 1 !== 0) return false; }
+  // and every count in range must actually be reachable
+  for (var k = 1; k <= 10; k++) if (!seen[k]) return false;
+  return true;
+})(), 'one to ten, all reachable, never zero');
+
+// Machine prices, counted among the gumball machines.
+out.push('');
+ok('the first new machine costs 25 gumballs', Game.gumballSetCost(0) === 25);
+ok('the second 50', Game.gumballSetCost(1) === 50);
+ok('and each adds 25', Game.gumballSetCost(4) === 125);
+
+var gp = Game.fresh();
+gp.gumballs = 20;
+ok('a pull you cannot afford is refused',
+   Game.buyGumballPull(gp, GUM[0], 0, function () { return 0.5; }).ok === false);
+ok('with no gumballs taken', gp.gumballs === 20);
+gp.gumballs = 100;
+var pulled = Game.buyGumballPull(gp, GUM[0], 0, function () { return 0; });
+ok('one you can afford goes through', pulled.ok === true);
+ok('it costs gumballs, not coins', gp.gumballs === 75 && gp.coins === 0, gp.gumballs + ' left');
+ok('and the card is added', gp.owned[pulled.card.id] === 1);
+ok('the second machine costs more',
+   Game.buyGumballPull(gp, GUM[1], 1, function () { return 0; }).cost === 50);
+ok('gumballs survive a save', Game.load(Game.save(gp)).gumballs === gp.gumballs);
+
 out.push('═══  ' + pass + ' passed, ' + fail + ' failed  ═══');
 out.join('\n');

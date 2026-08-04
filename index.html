@@ -17,8 +17,8 @@
 <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
 <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-<link rel="stylesheet" href="css/ios.css?v=8714445bcc">
-<link rel="stylesheet" href="css/app.css?v=8714445bcc">
+<link rel="stylesheet" href="css/ios.css?v=84dbdbc854">
+<link rel="stylesheet" href="css/app.css?v=84dbdbc854">
 </head>
 <body class="linen">
 
@@ -31,6 +31,8 @@
     <div class="title" id="navTitle">Play</div>
     <div class="right">
       <span class="coins"><span class="c">◉</span><span id="coinCount">0</span></span>
+      <!-- The second currency. Blue, and hidden until the machines are found. -->
+      <span class="coins gums hidden" id="gumWrap"><span class="g">●</span><span id="gumCount">0</span></span>
     </div>
   </div>
 
@@ -86,6 +88,12 @@
       <h3>Machines</h3>
       <div class="cells" id="machines"></div>
     </div>
+    <!-- Everything below only exists once the first collection is finished. -->
+    <div class="group hidden" id="gumGroup">
+      <h3><span class="warn-sign">⚠</span> New machines</h3>
+      <div class="cells" id="gumSource"></div>
+      <div class="cells" id="gumMachines"></div>
+    </div>
     <div class="group">
       <h3>Odds</h3>
       <div class="cells" id="oddsCell"></div>
@@ -125,6 +133,22 @@
 <div class="capsule-stage" id="capsuleStage"></div>
 
 <!-- ── the pull result ────────────────────────────────────────────────── -->
+<!-- New machines found. Fires when the collection is completed, and also on
+     load for anyone who finished it before these machines existed. -->
+<div class="modal-back" id="discBack">
+  <div class="modal" id="discModal">
+    <div class="warn-big">⚠</div>
+    <h2>New machines discovered</h2>
+    <p id="discBody">
+      Five more machines have turned up. They do not take coins — they take
+      gumballs, and there is a machine for those too.
+    </p>
+    <div class="row" style="margin-top:14px">
+      <button class="btn gold" id="discDone" style="flex:1">Have a look</button>
+    </div>
+  </div>
+</div>
+
 <!-- Finishing the collection. Two steps: the celebration, then what it won. -->
 <div class="modal-back" id="doneBack">
   <div class="confetti" id="confetti"></div>
@@ -202,10 +226,10 @@
   </div>
 </div>
 
-<script src="assets/manifest.js?v=8714445bcc"></script>
-<script src="js/sfx.js?v=8714445bcc"></script>
-<script src="js/state.js?v=8714445bcc"></script>
-<script src="js/flappy.js?v=8714445bcc"></script>
-<script src="js/app.js?v=8714445bcc"></script>
+<script src="assets/manifest.js?v=84dbdbc854"></script>
+<script src="js/sfx.js?v=84dbdbc854"></script>
+<script src="js/state.js?v=84dbdbc854"></script>
+<script src="js/flappy.js?v=84dbdbc854"></script>
+<script src="js/app.js?v=84dbdbc854"></script>
 </body>
 </html>
