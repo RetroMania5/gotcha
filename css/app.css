@@ -1054,7 +1054,13 @@
   box-shadow: 0 0 7px rgba(99,184,255,.7);
 }
 
-/* A machine that takes gumballs, in the same list as the coin ones. A tinted
-   edge rather than a separate heading — it is a machine like the others, it
-   just wants a different currency. */
-.cell.gum-row { border-left: 3px solid #3f9ae8; }
+/* How many turns a max buy was, shown under the counter. */
+.gum-note {
+  position: fixed; left: 50%; top: 22%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 12px; font-weight: 700;
+  color: rgba(255,255,255,.92);
+  text-shadow: 0 1px 4px rgba(0,0,0,.8);
+  z-index: 31;
+}

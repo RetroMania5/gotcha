@@ -12,7 +12,7 @@
   //  Stamped by tools/stamp.py from the source itself. Declared here, not
   //  beside the update check that uses it, so it is assigned before anything
   //  can render with it.
-  var BUILD = "2ffb828b28";
+  var BUILD = "a80d6d4695";
 
   var state = Game.fresh();
   var sets = [];
@@ -271,22 +271,6 @@
         spinForItem();
       })
     ));
-    // The gumball machine sits with the item machine rather than in a
-    // section of its own: both spend coins on something that is not a card.
-    // Only once the machines that take gumballs have been found.
-    if (state.discovered && Game.gumballSets(sets).length) {
-      var canGum = state.coins >= Game.GUMBALL_COST;
-      ibox.appendChild(cell(
-        pill("●", "linear-gradient(to bottom,#63b8ff,#1d6fd0)"),
-        "<b>Gumball machine</b><small>" + Game.GUMBALL_COST.toLocaleString() +
-          " coins for " + Game.GUMBALL_MIN + "–" + Game.GUMBALL_MAX +
-          " gumballs. Never blanks.</small>",
-        button(Game.GUMBALL_COST.toLocaleString(), canGum ? "gold" : "grey", !canGum, function () {
-          spinGumballs();
-        })
-      ));
-    }
-
     Game.ITEMS.forEach(function (it) {
       var n = Game.itemCount(state, it.id);
       var c = document.createElement("div");
@@ -301,8 +285,7 @@
 
     var mbox = $("machines");
     mbox.innerHTML = "";
-    // The coin machines keep their numbering, so their prices do not move
-    // when the gumball ones are appended below them.
+    // Coin machines only; the gumball ones have their own section below.
     Game.baseSets(sets).forEach(function (set, i) {
       var price = Game.setCost(i);
       var prog = Game.setProgress(state, set);
@@ -334,15 +317,49 @@
       ));
     });
 
-    // The machines that take gumballs go in the SAME list, below the coin
-    // ones, rather than in a section of their own — they are machines, and a
-    // second heading made them read as a different kind of thing.
-    if (state.discovered) {
-      Game.gumballSets(sets).forEach(function (set, gi) {
+    // ── the new machines ─────────────────────────────────────────────
+    //  Their own section, below the coin machines. They take a different
+    //  currency and they only exist once the collection is finished, so they
+    //  are genuinely a separate shelf rather than more of the same.
+    var gumSets = Game.gumballSets(sets);
+    var gumGroup = $("gumGroup");
+    if (gumGroup) {
+      gumGroup.classList.toggle("hidden", !state.discovered || !gumSets.length);
+    }
+    if (state.discovered && gumSets.length) {
+      var gsrc = $("gumSource");
+      gsrc.innerHTML = "";
+      var canGum = state.coins >= Game.GUMBALL_COST;
+      var spins = Game.affordableSpins(state);
+      var maxSpins = Math.min(spins, Game.GUMBALL_MAX_SPINS);
+
+      // One turn, or every turn you can afford. Stacked like the ×10 on a
+      // machine, and priced plainly so there is no bulk deal to hunt for.
+      var gbuys = document.createElement("div");
+      gbuys.className = "buy-stack";
+      gbuys.appendChild(button(Game.GUMBALL_COST.toLocaleString(),
+        canGum ? "gold" : "grey", !canGum, function () { spinGumballs(); }));
+      gbuys.appendChild(button(
+        maxSpins > 1 ? "All " + maxSpins + " · " + (maxSpins * Game.GUMBALL_COST).toLocaleString()
+                     : "All",
+        maxSpins > 1 ? "gum" : "grey", maxSpins < 2, function () { spinGumballsMax(); }));
+
+      gsrc.appendChild(cell(
+        pill("●", "linear-gradient(to bottom,#63b8ff,#1d6fd0)"),
+        "<b>Gumball machine</b><small>" + Game.GUMBALL_COST.toLocaleString() +
+          " coins for " + Game.GUMBALL_MIN + "–" + Game.GUMBALL_MAX +
+          " gumballs. Never blanks." +
+          (spins > 1 ? " You can afford " + spins + " turns." : "") + "</small>",
+        gbuys
+      ));
+
+      var gbox = $("gumMachines");
+      gbox.innerHTML = "";
+      gumSets.forEach(function (set, gi) {
         var price = Game.gumballSetCost(gi);
         var prog = Game.setProgress(state, set);
         var afford = (state.gumballs | 0) >= price;
-        var row = cell(
+        gbox.appendChild(cell(
           machinePreview(set),
           "<b>" + esc(set.name) + "</b><small>" + esc(set.blurb) + " · " +
             prog.have + " of " + prog.of +
@@ -351,10 +368,7 @@
             var r = e.currentTarget.closest(".cell");
             doGumPull(set, gi, r && r.querySelector(".machine-art"));
           })
-        );
-        // Marked, so it is obvious at a glance which currency a row wants.
-        row.classList.add("gum-row");
-        mbox.appendChild(row);
+        ));
       });
     }
 
@@ -509,6 +523,11 @@
   //  simply announced. That is the whole reason it is an animation.
   var gumSpinning = false;
   var GUM_BEATS = { hide: 0, rise: 200, turn: 620, first: 1150, step: 260, tail: 900 };
+  //  However many gumballs you win, at most this many are drawn. A hundred
+  //  balls at a readable pace would run for half a minute, and the point of
+  //  the animation is watching the count climb, not counting the balls.
+  var GUM_MAX_SHOWN = 36;
+  var GUM_DISPENSE_MS = 2600;      // the whole burst, whatever the count
 
   function spinGumballs() {
     if (busy() || gumSpinning) return;
@@ -519,10 +538,32 @@
     playGumballs(r);
   }
 
+  //  Every turn you can afford, in one burst. It is the same machine and the
+  //  same odds — this only saves pressing the button forty times.
+  function spinGumballsMax() {
+    if (busy() || gumSpinning) return;
+    var r = Game.buyGumballsMax(state, Math.random);
+    if (!r.ok) { Sfx.play("nope"); return; }
+    store();
+    renderCoins();
+    playGumballs(r);
+  }
+
   function playGumballs(r) {
     clearSequence();
     gumSpinning = true;
-    var total = GUM_BEATS.first + r.got * GUM_BEATS.step + GUM_BEATS.tail;
+
+    //  Drawn balls, and how many the counter moves for each. With a big haul
+    //  one ball carries several, so the number still lands on exactly what
+    //  was won rather than on however many balls happened to be drawn.
+    var shown = Math.max(1, Math.min(r.got, GUM_MAX_SHOWN));
+    var per = Math.floor(r.got / shown);
+    var extra = r.got % shown;
+    //  The gap BETWEEN balls, so it needs a ceiling as well as a floor: one
+    //  ball spread over the whole window would just sit there for 2.6s.
+    var step = Math.max(55, Math.min(300, Math.round(GUM_DISPENSE_MS / shown)));
+
+    var total = GUM_BEATS.first + shown * step + GUM_BEATS.tail;
     beginSequence(total);
 
     var stage = $("capsuleStage");
@@ -549,10 +590,10 @@
     at(GUM_BEATS.rise, function () { m.classList.add("up"); });
     at(GUM_BEATS.turn, function () { m.classList.add("turn"); Sfx.play("crank"); });
 
-    var shown = (state.gumballs | 0) - r.got;
-    for (var i = 0; i < r.got; i++) {
+    var count = (state.gumballs | 0) - r.got;
+    for (var i = 0; i < shown; i++) {
       (function (k) {
-        at(GUM_BEATS.first + k * GUM_BEATS.step, function () {
+        at(GUM_BEATS.first + k * step, function () {
           var ch = m.querySelector(".gum-chute").getBoundingClientRect();
           var b = document.createElement("div");
           b.className = "gumball";
@@ -575,10 +616,10 @@
 
           // It lands, the counter ticks, and the number takes the knock.
           pullTimers.push(setTimeout(function () {
-            shown++;
+            count += per + (k < extra ? 1 : 0);
             var el = $("gumTally");
             if (el) {
-              el.textContent = shown;
+              el.textContent = count;
               el.classList.remove("bump");
               void el.offsetWidth;              // restart the animation
               el.classList.add("bump");
@@ -590,7 +631,16 @@
       })(i);
     }
 
-    at(GUM_BEATS.first + r.got * GUM_BEATS.step + GUM_BEATS.tail - 250, function () {
+    // How many turns this was, when it was more than one.
+    if (r.spins > 1) {
+      var note = document.createElement("div");
+      note.className = "gum-note";
+      note.textContent = r.spins + " turns · " + r.got + " gumballs" +
+                         (r.capped ? " · " + r.left + " turns still affordable" : "");
+      stage.appendChild(note);
+    }
+
+    at(GUM_BEATS.first + shown * step + GUM_BEATS.tail - 250, function () {
       m.classList.add("away");
     });
 
@@ -1795,7 +1845,8 @@
     renderPetOpacity: renderPetOpacity, renderGoldRow: renderGoldRow,
     maybeCelebrate: maybeCelebrate, applyGold: applyGold,
     maybeDiscover: maybeDiscover, renderGumballs: renderGumballs,
-    spinGumballs: spinGumballs, doGumPull: doGumPull,
+    spinGumballs: spinGumballs, spinGumballsMax: spinGumballsMax,
+    doGumPull: doGumPull,
     game_gold_probe: function () { return game ? game._internals.gold() : null; },
     get petOpacity() { return petOpacity; },
     // What the GAME is actually carrying, not what the save says.

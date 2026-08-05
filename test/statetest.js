@@ -930,5 +930,62 @@ ok('the flag is on the cards, not only the sets', (function () {
   return typeof window !== 'undefined';
 })() || true, 'checked by test/runart.jxa against the real manifest');
 
+out.push('');
+out.push('── buying every turn at once ──');
+var mx = Game.fresh();
+ok('with nothing you can afford none', Game.affordableSpins(mx) === 0);
+ok('and the button refuses', Game.buyGumballsMax(mx, function () { return 0.5; }).ok === false);
+mx.coins = 999;
+ok('one coin short is still none', Game.affordableSpins(mx) === 0);
+mx.coins = 7400;
+ok('7400 coins is seven turns', Game.affordableSpins(mx) === 7);
+
+var big = Game.fresh();
+big.coins = 7400;
+var mr = Game.buyGumballsMax(big, function () { return 0; });   // every roll the minimum
+ok('it takes every whole turn', mr.spins === 7, String(mr.spins));
+ok('and charges for exactly those', mr.cost === 7000, String(mr.cost));
+ok('leaving the remainder', big.coins === 400, String(big.coins));
+ok('the lowest possible haul is one each', mr.got === 7, String(mr.got));
+
+var big2 = Game.fresh();
+big2.coins = 7000;
+ok('the highest is ten each',
+   Game.buyGumballsMax(big2, function () { return 0.999999; }).got === 70);
+
+// It must be the same deal as pressing the button repeatedly, not a
+// different one — no bulk bonus, no bulk penalty.
+ok('the odds are unchanged by buying in bulk', (function () {
+  var seed = 8675309;
+  function rng() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+  var one = Game.fresh(); one.coins = 1000 * 4000;
+  var oneTotal = 0;
+  for (var i = 0; i < 4000; i++) oneTotal += Game.buyGumballs(one, rng).got;
+  var many = Game.fresh(); many.coins = 1000 * 4000;
+  var manyTotal = 0;
+  while (Game.affordableSpins(many) > 0) manyTotal += Game.buyGumballsMax(many, rng).got;
+  // Same generator, same number of turns, so the averages must agree closely.
+  return Math.abs(oneTotal / 4000 - manyTotal / 4000) < 0.12;
+})(), '4,000 turns each way');
+
+// Bounded, or a few million coins would lock the page mid-loop.
+var rich = Game.fresh();
+rich.coins = 1000 * (Game.GUMBALL_MAX_SPINS + 40);
+var capped = Game.buyGumballsMax(rich, function () { return 0.5; });
+ok('a huge balance is capped rather than looping forever',
+   capped.spins === Game.GUMBALL_MAX_SPINS, String(capped.spins));
+ok('and it says so rather than swallowing the rest',
+   capped.capped === true && capped.left === 40, String(capped.left));
+ok('  charging only for the turns it took',
+   rich.coins === 40 * Game.GUMBALL_COST, String(rich.coins));
+
+// A single turn and a max buy must report the same shape, or the animation
+// has to special-case one of them.
+var shapeA = (function () { var st = Game.fresh(); st.coins = 1000;
+  return Game.buyGumballs(st, function () { return 0.5; }); })();
+ok('a single turn reports one spin', shapeA.spins === 1);
+ok('and both report got, spins and cost',
+   ['ok','spins','got','cost'].every(function (k) { return k in shapeA && k in capped; }));
+
 out.push('═══  ' + pass + ' passed, ' + fail + ' failed  ═══');
 out.join('\n');

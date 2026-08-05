@@ -237,7 +237,39 @@ var Game = (function () {
     if (n > GUMBALL_MAX) n = GUMBALL_MAX;      // a rng returning exactly 1
     state.coins -= GUMBALL_COST;
     state.gumballs = (state.gumballs | 0) + n;
-    return { ok: true, got: n, cost: GUMBALL_COST, total: state.gumballs };
+    // spins: 1 so a single turn and a max buy report the same shape.
+    return { ok: true, spins: 1, got: n, cost: GUMBALL_COST, total: state.gumballs };
+  }
+
+  //  Every turn you can afford, in one go. Each turn still rolls its own
+  //  1-10 — this is a shortcut for pressing the button repeatedly, not a
+  //  different deal, so the average per 1000 coins is unchanged.
+  //
+  //  Bounded, because at a few million coins the loop would be long enough to
+  //  lock the page. Anything left over is reported rather than swallowed.
+  var GUMBALL_MAX_SPINS = 500;
+
+  function affordableSpins(state) {
+    return Math.floor(state.coins / GUMBALL_COST);
+  }
+
+  function buyGumballsMax(state, rng) {
+    var want = affordableSpins(state);
+    if (want < 1) return { ok: false, reason: 'coins', cost: GUMBALL_COST };
+    rng = rng || Math.random;
+    var spins = Math.min(want, GUMBALL_MAX_SPINS);
+    var got = 0;
+    for (var i = 0; i < spins; i++) {
+      var n = GUMBALL_MIN + Math.floor(rng() * (GUMBALL_MAX - GUMBALL_MIN + 1));
+      if (n > GUMBALL_MAX) n = GUMBALL_MAX;
+      got += n;
+    }
+    state.coins -= spins * GUMBALL_COST;
+    state.gumballs = (state.gumballs | 0) + got;
+    return {
+      ok: true, spins: spins, got: got, cost: spins * GUMBALL_COST,
+      total: state.gumballs, capped: want > spins, left: want - spins,
+    };
   }
 
   function buyGumballPull(state, set, indexAmongGumball, rng) {
@@ -644,6 +676,8 @@ var Game = (function () {
     GUMBALL_COST: GUMBALL_COST, GUMBALL_MIN: GUMBALL_MIN, GUMBALL_MAX: GUMBALL_MAX,
     isGumballSet: isGumballSet, baseSets: baseSets, gumballSets: gumballSets,
     gumballSetCost: gumballSetCost, buyGumballs: buyGumballs,
+    buyGumballsMax: buyGumballsMax, affordableSpins: affordableSpins,
+    GUMBALL_MAX_SPINS: GUMBALL_MAX_SPINS,
     buyGumballPull: buyGumballPull,
     WHEEL: WHEEL, WHEEL_EVERY: WHEEL_EVERY,
     isWheelNext: isWheelNext, wheelProgress: wheelProgress,
