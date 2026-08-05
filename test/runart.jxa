@@ -1,0 +1,71 @@
+// The card art itself.
+//
+// This exists because of a real miss: the five new machines were
+// deduplicated against each OTHER but never against the original 120, and
+// two of them shipped as duplicates of cards that were already in the game.
+// Deduplicating a batch is not the same as deduplicating the collection.
+//
+// Perceptual hashing is done by tools/dupecheck.py, which this drives — the
+// image work needs PIL, and JXA has no image decoder.
+ObjC.import("Foundation");
+
+function sh(cmd) {
+  var app = Application.currentApplication();
+  app.includeStandardAdditions = true;
+  try { return app.doShellScript(cmd); } catch (e) { return "ERROR " + e.message; }
+}
+
+var D = "/Users/zander/Desktop/repo/gotcha/";
+var raw = sh("cd " + D + " && python3 tools/dupecheck.py --json 2>&1");
+var out = [], pass = 0, fail = 0;
+function ok(n,c,note){ if(c){pass++;out.push("PASS  "+n+(note?"  ["+note+"]":""));}
+                       else {fail++;out.push("FAIL  "+n+(note?"  ["+note+"]":""));} }
+
+var r = null;
+try { r = JSON.parse(raw); } catch (e) { r = null; }
+
+out.push("── every card is its own picture ──");
+ok("the checker ran", !!r, r ? "" : raw.slice(0, 200));
+
+if (r) {
+  ok("every card in the manifest has a file on disk", r.missing.length === 0,
+     r.missing.join(", ") || r.cards + " cards");
+  ok("no two cards are the same picture", r.duplicates.length === 0,
+     r.duplicates.length ? r.duplicates.map(function (p) { return p[0] + "=" + p[1]; }).join(", ")
+                         : r.cards + " cards, all distinct");
+  // The pairs that shipped were BETWEEN machines, which is exactly what a
+  // per-machine check would have missed.
+  ok("  checked across machines, not just within one",
+     r.compared === (r.cards * (r.cards - 1)) / 2,
+     r.compared.toLocaleString ? r.compared + " pairs" : String(r.compared));
+  ok("and the closest surviving pair is not borderline", r.closest > 6,
+     "distance " + r.closest + " (" + r.closestPair.join(" vs ") + ")");
+
+  // Every card must actually have transparency — the standing rule is that a
+  // picture with a background gets replaced, not cut out.
+  ok("every card has a real transparent background", r.opaque.length === 0,
+     r.opaque.join(", ") || "all " + r.cards);
+
+  // Shape, so the grid stays even.
+  ok("every card is square", r.notSquare.length === 0, r.notSquare.join(", ") || "512x512");
+
+  out.push("");
+  out.push("── the machines ──");
+  ok("thirteen machines", r.sets === 13, String(r.sets));
+  ok("fifteen cards each", r.badSize.length === 0, r.badSize.join(", ") || "all fifteen");
+  ok("every id is unique", r.dupIds.length === 0, r.dupIds.join(", ") || "195 ids");
+  ok("the rarity spread is right in every machine", r.badRarity.length === 0,
+     r.badRarity.join(", ") || "10 / 3 / 1 / 1");
+
+  // Selling reads the 5x flag off the CARD, since a card is sold from the
+  // collection where its set is not to hand. A set marked special whose cards
+  // are not would silently sell at the ordinary price.
+  ok("every special card is marked, not just its machine",
+     r.unmarkedSpecial.length === 0, r.unmarkedSpecial.join(", ") || "75 cards");
+  ok("and no ordinary card is marked special",
+     r.markedPlain.length === 0, r.markedPlain.join(", ") || "120 cards");
+}
+
+out.push("");
+out.push("═══  " + pass + " passed, " + fail + " failed  ═══");
+out.join("\n");

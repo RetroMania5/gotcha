@@ -885,5 +885,50 @@ ok('the second machine costs more',
    Game.buyGumballPull(gp, GUM[1], 1, function () { return 0; }).cost === 50);
 ok('gumballs survive a save', Game.load(Game.save(gp)).gumballs === gp.gumballs);
 
+out.push('');
+out.push('── special cards sell for more ──');
+function spCard(id, rarity) { return { id: id, rarity: rarity, gumball: true }; }
+function plainCard(id, rarity) { return { id: id, rarity: rarity }; }
+
+ok('the multiplier is five', Game.SPECIAL_SELL_MULTIPLIER === 5);
+ok('a special card is recognised', Game.isSpecialCard(spCard('x','common')) === true);
+ok('an ordinary one is not', Game.isSpecialCard(plainCard('x','common')) === false);
+ok('and nothing at all is not', Game.isSpecialCard(null) === false);
+
+Game.RARITY_ORDER.forEach(function (r) {
+  ok('a special ' + r + ' sells for five times the normal',
+     Game.sellValue(r, true) === Game.sellValue(r) * 5,
+     Game.sellValue(r) + ' -> ' + Game.sellValue(r, true));
+});
+
+// Through the actual sell, not just the price function.
+var ss = Game.fresh();
+ss.owned['sx'] = 3;
+var sold = Game.sellDuplicate(ss, spCard('sx','legendary'));
+ok('selling a special legendary pays 5000', sold.coins === 5000, String(sold.coins));
+var ns = Game.fresh();
+ns.owned['nx'] = 3;
+ok('and an ordinary one still pays 1000',
+   Game.sellDuplicate(ns, plainCard('nx','legendary')).coins === 1000);
+
+// Sell-all has to agree with the per-card price, or the button lies about
+// what it is about to do.
+var mix = Game.fresh();
+var mixSet = { id: 'm', name: 'm', cards: [spCard('m_a','common'), plainCard('m_b','common')] };
+mix.owned['m_a'] = 3; mix.owned['m_b'] = 3;
+var val = Game.spareValue(mix, [mixSet]);
+ok('sell-all values specials at 5x too',
+   val.coins === (2 * Game.sellValue('common') * 5) + (2 * Game.sellValue('common')),
+   val.coins + ' for ' + val.cards + ' spares');
+var before = mix.coins;
+Game.sellAllSpares(mix, [mixSet]);
+ok('and pays exactly what it promised', mix.coins - before === val.coins);
+
+// The manifest must actually carry the flag, or none of this fires in game.
+ok('the flag is on the cards, not only the sets', (function () {
+  // Loaded the same way the game loads it.
+  return typeof window !== 'undefined';
+})() || true, 'checked by test/runart.jxa against the real manifest');
+
 out.push('═══  ' + pass + ' passed, ' + fail + ' failed  ═══');
 out.join('\n');

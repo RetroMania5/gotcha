@@ -109,8 +109,17 @@ var Game = (function () {
     legendary: 1000,
   };
 
-  function sellValue(rarity) {
-    return SELL_VALUE[rarity] || SELL_VALUE.common;
+  //  Cards from the gumball machines are worth five times as much. They cost
+  //  a currency you can only get after finishing the collection, so a spare
+  //  from one of them represents a great deal more work than a spare from a
+  //  25-coin machine.
+  var SPECIAL_SELL_MULTIPLIER = 5;
+
+  function isSpecialCard(card) { return !!(card && card.gumball); }
+
+  function sellValue(rarity, special) {
+    var base = SELL_VALUE[rarity] || SELL_VALUE.common;
+    return special ? base * SPECIAL_SELL_MULTIPLIER : base;
   }
 
   //  Sell one spare. Returns what happened rather than mutating quietly, so
@@ -121,7 +130,7 @@ var Game = (function () {
     if (have < 2) return { ok: false, reason: "last", have: have };
     // Only duplicates can be sold, so the last copy never goes this way and an
     // equipped pet cannot be sold out from under itself.
-    var coins = sellValue(card.rarity);
+    var coins = sellValue(card.rarity, isSpecialCard(card));
     state.owned[card.id] = have - 1;
     state.coins += coins;
     return { ok: true, coins: coins, left: have - 1 };
@@ -134,7 +143,7 @@ var Game = (function () {
     sets.forEach(function (s) {
       s.cards.forEach(function (c) {
         var extra = Math.max(0, (state.owned[c.id] || 0) - 1);
-        if (extra) { n += extra; total += extra * sellValue(c.rarity); }
+        if (extra) { n += extra; total += extra * sellValue(c.rarity, isSpecialCard(c)); }
       });
     });
     return { coins: total, cards: n };
@@ -625,7 +634,8 @@ var Game = (function () {
     itemById: itemById, spinItem: spinItem, itemCount: itemCount,
     isArmed: isArmed, armedItem: armedItem, toggleItem: toggleItem,
     activeEffects: activeEffects, consumeArmed: consumeArmed,
-    sellValue: sellValue, sellDuplicate: sellDuplicate,
+    sellValue: sellValue, isSpecialCard: isSpecialCard,
+    SPECIAL_SELL_MULTIPLIER: SPECIAL_SELL_MULTIPLIER, sellDuplicate: sellDuplicate,
     spareValue: spareValue, sellAllSpares: sellAllSpares,
     perPipe: perPipe, upgradeCost: upgradeCost, pipesToAfford: pipesToAfford,
     coinsPerPipe: coinsPerPipe, flatUpgrades: flatUpgrades, wheelMult: wheelMult,

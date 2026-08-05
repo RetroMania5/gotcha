@@ -12,7 +12,7 @@
   //  Stamped by tools/stamp.py from the source itself. Declared here, not
   //  beside the update check that uses it, so it is assigned before anything
   //  can render with it.
-  var BUILD = "84dbdbc854";
+  var BUILD = "ae84476cef";
 
   var state = Game.fresh();
   var sets = [];
@@ -1401,12 +1401,15 @@
         // so only cards you have more than one of are clickable.
         if (n > 1) {
           d.classList.add("sellable");
-          var worth = Game.sellValue(card.rarity);
-          d.title = Game.RARITY[card.rarity].label + " — tap to sell a spare for " +
-                    worth + " coins (" + (n - 1) + " spare)";
+          var special = Game.isSpecialCard(card);
+          var worth = Game.sellValue(card.rarity, special);
+          d.title = Game.RARITY[card.rarity].label +
+                    (special ? " (special — " + Game.SPECIAL_SELL_MULTIPLIER + "×)" : "") +
+                    " — tap to sell a spare for " +
+                    worth.toLocaleString() + " coins (" + (n - 1) + " spare)";
           var tag = document.createElement("div");
-          tag.className = "sell-tag";
-          tag.textContent = "+" + worth;
+          tag.className = "sell-tag" + (special ? " special" : "");
+          tag.textContent = "+" + worth.toLocaleString();
           d.appendChild(tag);
           d.onclick = function () { sellOne(card, d); };
         } else {

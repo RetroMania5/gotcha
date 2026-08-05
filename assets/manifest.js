@@ -691,77 +691,92 @@ window.GOTCHA_SETS = [
    {
     "file": "cinderpeak/00.png",
     "rarity": "legendary",
-    "id": "cinderpeak_00"
+    "id": "cinderpeak_00",
+    "gumball": true
    },
    {
     "file": "cinderpeak/01.png",
     "rarity": "veryrare",
-    "id": "cinderpeak_01"
+    "id": "cinderpeak_01",
+    "gumball": true
    },
    {
     "file": "cinderpeak/02.png",
     "rarity": "rare",
-    "id": "cinderpeak_02"
+    "id": "cinderpeak_02",
+    "gumball": true
    },
    {
     "file": "cinderpeak/03.png",
     "rarity": "rare",
-    "id": "cinderpeak_03"
+    "id": "cinderpeak_03",
+    "gumball": true
    },
    {
     "file": "cinderpeak/04.png",
     "rarity": "rare",
-    "id": "cinderpeak_04"
+    "id": "cinderpeak_04",
+    "gumball": true
    },
    {
     "file": "cinderpeak/05.png",
     "rarity": "common",
-    "id": "cinderpeak_05"
+    "id": "cinderpeak_05",
+    "gumball": true
    },
    {
     "file": "cinderpeak/06.png",
     "rarity": "common",
-    "id": "cinderpeak_06"
+    "id": "cinderpeak_06",
+    "gumball": true
    },
    {
     "file": "cinderpeak/07.png",
     "rarity": "common",
-    "id": "cinderpeak_07"
+    "id": "cinderpeak_07",
+    "gumball": true
    },
    {
     "file": "cinderpeak/08.png",
     "rarity": "common",
-    "id": "cinderpeak_08"
+    "id": "cinderpeak_08",
+    "gumball": true
    },
    {
     "file": "cinderpeak/09.png",
     "rarity": "common",
-    "id": "cinderpeak_09"
+    "id": "cinderpeak_09",
+    "gumball": true
    },
    {
     "file": "cinderpeak/10.png",
     "rarity": "common",
-    "id": "cinderpeak_10"
+    "id": "cinderpeak_10",
+    "gumball": true
    },
    {
     "file": "cinderpeak/11.png",
     "rarity": "common",
-    "id": "cinderpeak_11"
+    "id": "cinderpeak_11",
+    "gumball": true
    },
    {
     "file": "cinderpeak/12.png",
     "rarity": "common",
-    "id": "cinderpeak_12"
+    "id": "cinderpeak_12",
+    "gumball": true
    },
    {
     "file": "cinderpeak/13.png",
     "rarity": "common",
-    "id": "cinderpeak_13"
+    "id": "cinderpeak_13",
+    "gumball": true
    },
    {
     "file": "cinderpeak/14.png",
     "rarity": "common",
-    "id": "cinderpeak_14"
+    "id": "cinderpeak_14",
+    "gumball": true
    }
   ],
   "gumball": true
@@ -776,77 +791,92 @@ window.GOTCHA_SETS = [
    {
     "file": "goldrush/00.png",
     "rarity": "legendary",
-    "id": "goldrush_00"
+    "id": "goldrush_00",
+    "gumball": true
    },
    {
     "file": "goldrush/01.png",
     "rarity": "veryrare",
-    "id": "goldrush_01"
+    "id": "goldrush_01",
+    "gumball": true
    },
    {
     "file": "goldrush/02.png",
     "rarity": "rare",
-    "id": "goldrush_02"
+    "id": "goldrush_02",
+    "gumball": true
    },
    {
     "file": "goldrush/03.png",
     "rarity": "rare",
-    "id": "goldrush_03"
+    "id": "goldrush_03",
+    "gumball": true
    },
    {
     "file": "goldrush/04.png",
     "rarity": "rare",
-    "id": "goldrush_04"
+    "id": "goldrush_04",
+    "gumball": true
    },
    {
     "file": "goldrush/05.png",
     "rarity": "common",
-    "id": "goldrush_05"
+    "id": "goldrush_05",
+    "gumball": true
    },
    {
     "file": "goldrush/06.png",
     "rarity": "common",
-    "id": "goldrush_06"
+    "id": "goldrush_06",
+    "gumball": true
    },
    {
     "file": "goldrush/07.png",
     "rarity": "common",
-    "id": "goldrush_07"
+    "id": "goldrush_07",
+    "gumball": true
    },
    {
     "file": "goldrush/08.png",
     "rarity": "common",
-    "id": "goldrush_08"
+    "id": "goldrush_08",
+    "gumball": true
    },
    {
     "file": "goldrush/09.png",
     "rarity": "common",
-    "id": "goldrush_09"
+    "id": "goldrush_09",
+    "gumball": true
    },
    {
     "file": "goldrush/10.png",
     "rarity": "common",
-    "id": "goldrush_10"
+    "id": "goldrush_10",
+    "gumball": true
    },
    {
     "file": "goldrush/11.png",
     "rarity": "common",
-    "id": "goldrush_11"
+    "id": "goldrush_11",
+    "gumball": true
    },
    {
     "file": "goldrush/12.png",
     "rarity": "common",
-    "id": "goldrush_12"
+    "id": "goldrush_12",
+    "gumball": true
    },
    {
     "file": "goldrush/13.png",
     "rarity": "common",
-    "id": "goldrush_13"
+    "id": "goldrush_13",
+    "gumball": true
    },
    {
     "file": "goldrush/14.png",
     "rarity": "common",
-    "id": "goldrush_14"
+    "id": "goldrush_14",
+    "gumball": true
    }
   ],
   "gumball": true
@@ -861,77 +891,92 @@ window.GOTCHA_SETS = [
    {
     "file": "verdigris/00.png",
     "rarity": "legendary",
-    "id": "verdigris_00"
+    "id": "verdigris_00",
+    "gumball": true
    },
    {
     "file": "verdigris/01.png",
     "rarity": "veryrare",
-    "id": "verdigris_01"
+    "id": "verdigris_01",
+    "gumball": true
    },
    {
     "file": "verdigris/02.png",
     "rarity": "rare",
-    "id": "verdigris_02"
+    "id": "verdigris_02",
+    "gumball": true
    },
    {
     "file": "verdigris/03.png",
     "rarity": "rare",
-    "id": "verdigris_03"
+    "id": "verdigris_03",
+    "gumball": true
    },
    {
     "file": "verdigris/04.png",
     "rarity": "rare",
-    "id": "verdigris_04"
+    "id": "verdigris_04",
+    "gumball": true
    },
    {
     "file": "verdigris/05.png",
     "rarity": "common",
-    "id": "verdigris_05"
+    "id": "verdigris_05",
+    "gumball": true
    },
    {
     "file": "verdigris/06.png",
     "rarity": "common",
-    "id": "verdigris_06"
+    "id": "verdigris_06",
+    "gumball": true
    },
    {
     "file": "verdigris/07.png",
     "rarity": "common",
-    "id": "verdigris_07"
+    "id": "verdigris_07",
+    "gumball": true
    },
    {
     "file": "verdigris/08.png",
     "rarity": "common",
-    "id": "verdigris_08"
+    "id": "verdigris_08",
+    "gumball": true
    },
    {
     "file": "verdigris/09.png",
     "rarity": "common",
-    "id": "verdigris_09"
+    "id": "verdigris_09",
+    "gumball": true
    },
    {
     "file": "verdigris/10.png",
     "rarity": "common",
-    "id": "verdigris_10"
+    "id": "verdigris_10",
+    "gumball": true
    },
    {
     "file": "verdigris/11.png",
     "rarity": "common",
-    "id": "verdigris_11"
+    "id": "verdigris_11",
+    "gumball": true
    },
    {
     "file": "verdigris/12.png",
     "rarity": "common",
-    "id": "verdigris_12"
+    "id": "verdigris_12",
+    "gumball": true
    },
    {
     "file": "verdigris/13.png",
     "rarity": "common",
-    "id": "verdigris_13"
+    "id": "verdigris_13",
+    "gumball": true
    },
    {
     "file": "verdigris/14.png",
     "rarity": "common",
-    "id": "verdigris_14"
+    "id": "verdigris_14",
+    "gumball": true
    }
   ],
   "gumball": true
@@ -946,77 +991,92 @@ window.GOTCHA_SETS = [
    {
     "file": "deepdive/00.png",
     "rarity": "legendary",
-    "id": "deepdive_00"
+    "id": "deepdive_00",
+    "gumball": true
    },
    {
     "file": "deepdive/01.png",
     "rarity": "veryrare",
-    "id": "deepdive_01"
+    "id": "deepdive_01",
+    "gumball": true
    },
    {
     "file": "deepdive/02.png",
     "rarity": "rare",
-    "id": "deepdive_02"
+    "id": "deepdive_02",
+    "gumball": true
    },
    {
     "file": "deepdive/03.png",
     "rarity": "rare",
-    "id": "deepdive_03"
+    "id": "deepdive_03",
+    "gumball": true
    },
    {
     "file": "deepdive/04.png",
     "rarity": "rare",
-    "id": "deepdive_04"
+    "id": "deepdive_04",
+    "gumball": true
    },
    {
     "file": "deepdive/05.png",
     "rarity": "common",
-    "id": "deepdive_05"
+    "id": "deepdive_05",
+    "gumball": true
    },
    {
     "file": "deepdive/06.png",
     "rarity": "common",
-    "id": "deepdive_06"
+    "id": "deepdive_06",
+    "gumball": true
    },
    {
     "file": "deepdive/07.png",
     "rarity": "common",
-    "id": "deepdive_07"
+    "id": "deepdive_07",
+    "gumball": true
    },
    {
     "file": "deepdive/08.png",
     "rarity": "common",
-    "id": "deepdive_08"
+    "id": "deepdive_08",
+    "gumball": true
    },
    {
     "file": "deepdive/09.png",
     "rarity": "common",
-    "id": "deepdive_09"
+    "id": "deepdive_09",
+    "gumball": true
    },
    {
     "file": "deepdive/10.png",
     "rarity": "common",
-    "id": "deepdive_10"
+    "id": "deepdive_10",
+    "gumball": true
    },
    {
     "file": "deepdive/11.png",
     "rarity": "common",
-    "id": "deepdive_11"
+    "id": "deepdive_11",
+    "gumball": true
    },
    {
     "file": "deepdive/12.png",
     "rarity": "common",
-    "id": "deepdive_12"
+    "id": "deepdive_12",
+    "gumball": true
    },
    {
     "file": "deepdive/13.png",
     "rarity": "common",
-    "id": "deepdive_13"
+    "id": "deepdive_13",
+    "gumball": true
    },
    {
     "file": "deepdive/14.png",
     "rarity": "common",
-    "id": "deepdive_14"
+    "id": "deepdive_14",
+    "gumball": true
    }
   ],
   "gumball": true
@@ -1031,77 +1091,92 @@ window.GOTCHA_SETS = [
    {
     "file": "violetta/00.png",
     "rarity": "legendary",
-    "id": "violetta_00"
+    "id": "violetta_00",
+    "gumball": true
    },
    {
     "file": "violetta/01.png",
     "rarity": "veryrare",
-    "id": "violetta_01"
+    "id": "violetta_01",
+    "gumball": true
    },
    {
     "file": "violetta/02.png",
     "rarity": "rare",
-    "id": "violetta_02"
+    "id": "violetta_02",
+    "gumball": true
    },
    {
     "file": "violetta/03.png",
     "rarity": "rare",
-    "id": "violetta_03"
+    "id": "violetta_03",
+    "gumball": true
    },
    {
     "file": "violetta/04.png",
     "rarity": "rare",
-    "id": "violetta_04"
+    "id": "violetta_04",
+    "gumball": true
    },
    {
     "file": "violetta/05.png",
     "rarity": "common",
-    "id": "violetta_05"
+    "id": "violetta_05",
+    "gumball": true
    },
    {
     "file": "violetta/06.png",
     "rarity": "common",
-    "id": "violetta_06"
+    "id": "violetta_06",
+    "gumball": true
    },
    {
     "file": "violetta/07.png",
     "rarity": "common",
-    "id": "violetta_07"
+    "id": "violetta_07",
+    "gumball": true
    },
    {
     "file": "violetta/08.png",
     "rarity": "common",
-    "id": "violetta_08"
+    "id": "violetta_08",
+    "gumball": true
    },
    {
     "file": "violetta/09.png",
     "rarity": "common",
-    "id": "violetta_09"
+    "id": "violetta_09",
+    "gumball": true
    },
    {
     "file": "violetta/10.png",
     "rarity": "common",
-    "id": "violetta_10"
+    "id": "violetta_10",
+    "gumball": true
    },
    {
     "file": "violetta/11.png",
     "rarity": "common",
-    "id": "violetta_11"
+    "id": "violetta_11",
+    "gumball": true
    },
    {
     "file": "violetta/12.png",
     "rarity": "common",
-    "id": "violetta_12"
+    "id": "violetta_12",
+    "gumball": true
    },
    {
     "file": "violetta/13.png",
     "rarity": "common",
-    "id": "violetta_13"
+    "id": "violetta_13",
+    "gumball": true
    },
    {
     "file": "violetta/14.png",
     "rarity": "common",
-    "id": "violetta_14"
+    "id": "violetta_14",
+    "gumball": true
    }
   ],
   "gumball": true

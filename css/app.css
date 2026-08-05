@@ -1045,3 +1045,11 @@
   .gum-tally span.bump { animation: none; }
   .gumball { transition-duration: .01s; }
 }
+
+/* A spare from one of the gumball machines is worth five times as much, so
+   the tag says so in the same blue as the currency that bought it. */
+.sell-tag.special {
+  background: linear-gradient(to bottom, #63b8ff, #1d6fd0);
+  color: #fff;
+  box-shadow: 0 0 7px rgba(99,184,255,.7);
+}
