@@ -12,7 +12,7 @@
   //  Stamped by tools/stamp.py from the source itself. Declared here, not
   //  beside the update check that uses it, so it is assigned before anything
   //  can render with it.
-  var BUILD = "ae84476cef";
+  var BUILD = "2ffb828b28";
 
   var state = Game.fresh();
   var sets = [];
@@ -271,6 +271,22 @@
         spinForItem();
       })
     ));
+    // The gumball machine sits with the item machine rather than in a
+    // section of its own: both spend coins on something that is not a card.
+    // Only once the machines that take gumballs have been found.
+    if (state.discovered && Game.gumballSets(sets).length) {
+      var canGum = state.coins >= Game.GUMBALL_COST;
+      ibox.appendChild(cell(
+        pill("●", "linear-gradient(to bottom,#63b8ff,#1d6fd0)"),
+        "<b>Gumball machine</b><small>" + Game.GUMBALL_COST.toLocaleString() +
+          " coins for " + Game.GUMBALL_MIN + "–" + Game.GUMBALL_MAX +
+          " gumballs. Never blanks.</small>",
+        button(Game.GUMBALL_COST.toLocaleString(), canGum ? "gold" : "grey", !canGum, function () {
+          spinGumballs();
+        })
+      ));
+    }
+
     Game.ITEMS.forEach(function (it) {
       var n = Game.itemCount(state, it.id);
       var c = document.createElement("div");
@@ -285,7 +301,9 @@
 
     var mbox = $("machines");
     mbox.innerHTML = "";
-    sets.forEach(function (set, i) {
+    // The coin machines keep their numbering, so their prices do not move
+    // when the gumball ones are appended below them.
+    Game.baseSets(sets).forEach(function (set, i) {
       var price = Game.setCost(i);
       var prog = Game.setProgress(state, set);
       var afford = state.coins >= price;
@@ -316,42 +334,27 @@
       ));
     });
 
-    // ── the new machines ─────────────────────────────────────────────
-    var gumSets = Game.gumballSets(sets);
-    var gumGroup = $("gumGroup");
-    if (gumGroup) {
-      gumGroup.classList.toggle("hidden", !state.discovered || !gumSets.length);
-    }
-    if (state.discovered && gumSets.length) {
-      var gsrc = $("gumSource");
-      gsrc.innerHTML = "";
-      var canGum = state.coins >= Game.GUMBALL_COST;
-      gsrc.appendChild(cell(
-        pill("●", "linear-gradient(to bottom,#63b8ff,#1d6fd0)"),
-        "<b>Gumball machine</b><small>" + Game.GUMBALL_COST.toLocaleString() +
-          " coins for " + Game.GUMBALL_MIN + "–" + Game.GUMBALL_MAX +
-          " gumballs. Never blanks.</small>",
-        button(Game.GUMBALL_COST.toLocaleString(), canGum ? "gold" : "grey", !canGum, function () {
-          spinGumballs();
-        })
-      ));
-
-      var gbox = $("gumMachines");
-      gbox.innerHTML = "";
-      gumSets.forEach(function (set, gi) {
+    // The machines that take gumballs go in the SAME list, below the coin
+    // ones, rather than in a section of their own — they are machines, and a
+    // second heading made them read as a different kind of thing.
+    if (state.discovered) {
+      Game.gumballSets(sets).forEach(function (set, gi) {
         var price = Game.gumballSetCost(gi);
         var prog = Game.setProgress(state, set);
         var afford = (state.gumballs | 0) >= price;
-        gbox.appendChild(cell(
+        var row = cell(
           machinePreview(set),
           "<b>" + esc(set.name) + "</b><small>" + esc(set.blurb) + " · " +
             prog.have + " of " + prog.of +
             (prog.complete ? " — complete" : "") + "</small>",
           button("● " + price.toLocaleString(), afford ? "gum" : "grey", !afford, function (e) {
-            var row = e.currentTarget.closest(".cell");
-            doGumPull(set, gi, row && row.querySelector(".machine-art"));
+            var r = e.currentTarget.closest(".cell");
+            doGumPull(set, gi, r && r.querySelector(".machine-art"));
           })
-        ));
+        );
+        // Marked, so it is obvious at a glance which currency a row wants.
+        row.classList.add("gum-row");
+        mbox.appendChild(row);
       });
     }
 

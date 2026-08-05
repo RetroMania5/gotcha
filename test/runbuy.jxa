@@ -59,7 +59,7 @@ var byId={};
  "setBtn","setBack","setModal","setClose","petOpacity","petOpacityNote",
  "doneBack","doneModal","doneTitle","doneBody","doneNext","confetti",
  "goldRow","goldBtn","goldNote",
- "gumWrap","gumCount","gumGroup","gumSource","gumMachines",
+ "gumWrap","gumCount",
  "discBack","discModal","discBody","discDone","gumTally"].forEach(function(id){ var e=El(); e.id=id; byId[id]=e; });
 byId.dBest.parent = El();
 // The game needs a canvas; a stub context is enough since nothing is drawn.
@@ -786,9 +786,15 @@ if (err) { err; } else {
   G.state.owned = {}; G.state.discovered = false; G.state.gumballs = 0;
   G.state.completed = false;
   G.show("shop");
-  out.push("the new group is hidden to begin with: " +
-           (document.getElementById("gumGroup").className.indexOf("hidden") >= 0));
-  out.push("  and so is the gumball counter: " +
+  G.renderShop();
+  // Before discovery the machines list holds only the coin machines, and the
+  // gumball machine is not offered in the items section either.
+  out.push("only the coin machines are listed: " +
+           document.getElementById("machines").children.length +
+           (document.getElementById("machines").children.length === baseSets.length ? "  (8)" : "  (WRONG)"));
+  out.push("  the gumball machine is not offered yet: " +
+           (document.getElementById("itemCell").children.length === 4));
+  out.push("  and the counter is hidden: " +
            (document.getElementById("gumWrap").className.indexOf("hidden") >= 0));
 
   // THE RETURNING PLAYER: already has all 120 and already "completed", but has
@@ -808,14 +814,27 @@ if (err) { err; } else {
   out.push("  the counter is now visible: " +
            (document.getElementById("gumWrap").className.indexOf("hidden") < 0));
   G.renderShop();
-  out.push("  and the new machines are listed: " +
-           document.getElementById("gumMachines").children.length);
+  // They live in the SAME list as the coin machines, not a section of their own.
+  var rows = document.getElementById("machines").children;
+  out.push("  all machines in one list: " + rows.length +
+           (rows.length === baseSets.length + gumSets.length ? "  (8 + 5)" : "  (WRONG)"));
+  var gumRows = 0;
+  for (var mi = 0; mi < rows.length; mi++) {
+    if (rows[mi].className.indexOf("gum-row") >= 0) gumRows++;
+  }
+  out.push("  five of them take gumballs: " + gumRows);
+  out.push("  and they come after the coin ones: " +
+           (rows[baseSets.length].className.indexOf("gum-row") >= 0 &&
+            rows[baseSets.length - 1].className.indexOf("gum-row") < 0));
+  out.push("  the gumball machine joined the items: " +
+           (document.getElementById("itemCell").children.length === 5));
 
   // Buying gumballs.
   G.state.coins = 5000;
   G.renderShop();
   var gsrcBtn = (function () {
-    var c = document.getElementById("gumSource").children[0];
+    // Now the first row of the items section, above the three items.
+    var c = document.getElementById("itemCell").children[1];
     return c.children[c.children.length - 1];
   })();
   out.push("gumball machine price: " + gsrcBtn.textContent);
@@ -835,7 +854,7 @@ if (err) { err; } else {
   // Buying a new machine costs gumballs, not coins.
   G.state.gumballs = 500;
   G.renderShop();
-  var gmRow = document.getElementById("gumMachines").children[0];
+  var gmRow = document.getElementById("machines").children[baseSets.length];
   var gmBtn = gmRow.children[gmRow.children.length - 1];
   out.push("first new machine price: " + gmBtn.textContent +
            (gmBtn.textContent.indexOf("25") >= 0 ? "  (25 gumballs)" : "  (WRONG)"));
@@ -852,13 +871,13 @@ if (err) { err; } else {
 
   // The second new machine costs more.
   G.renderShop();
-  var gm2 = document.getElementById("gumMachines").children[1];
+  var gm2 = document.getElementById("machines").children[baseSets.length + 1];
   out.push("second new machine price: " + gm2.children[gm2.children.length - 1].textContent);
 
   // Too few gumballs: refused, nothing taken.
   G.state.gumballs = 1;
   G.renderShop();
-  var poorRow = document.getElementById("gumMachines").children[0];
+  var poorRow = document.getElementById("machines").children[baseSets.length];
   var poorBtn = poorRow.children[poorRow.children.length - 1];
   poorBtn.onclick({ currentTarget: poorBtn });
   __flush();

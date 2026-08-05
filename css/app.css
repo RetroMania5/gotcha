@@ -1053,3 +1053,8 @@
   color: #fff;
   box-shadow: 0 0 7px rgba(99,184,255,.7);
 }
+
+/* A machine that takes gumballs, in the same list as the coin ones. A tinted
+   edge rather than a separate heading — it is a machine like the others, it
+   just wants a different currency. */
+.cell.gum-row { border-left: 3px solid #3f9ae8; }
